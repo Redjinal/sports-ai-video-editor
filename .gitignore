@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output / caches
+dist/
+build/
+out/
+target/
+*.tsbuildinfo
+.vite/
+.turbo/
+
+# Generated code (must be reproducible; commit only when release requires)
+**/gen/
+**/generated/
+
+# Rust
+/native/**/target/
+/apps/desktop/src-tauri/target/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# User media, projects, and exports (never committed)
+**/exports/
+**/media/local/
+*.mp4
+*.mov
+*.mkv
+*.mp3
+*.wav
+*.aac
+# ...but allow checked-in synthetic test fixtures
+!fixtures/media/**
+
+# Logs / diagnostics
+*.log
+logs/
+diagnostics/
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
