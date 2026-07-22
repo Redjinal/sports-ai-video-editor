@@ -43,15 +43,18 @@ Required architecture spike:
 | Product documentation | Complete |
 | Architecture documentation | Complete |
 | Engineering/operations documentation | Complete |
-| Repository scaffold | Not started |
-| Shared UI | Not started |
-| Timeline domain implementation | Not started |
-| Project persistence | Not started |
-| Desktop native media bridge | Not started |
+| Version control | Complete — git initialised; GitHub remote pending authentication |
+| Repository scaffold | Complete — pnpm workspace, strict TS, ESLint boundaries, Prettier, Vitest |
+| Quality commands | Complete — `pnpm check` (format, lint, typecheck, test) green |
+| Media contracts | Complete — inspect/proxy/render-plan/export-job DTOs + zod validation |
+| Timeline domain implementation | Partial — tick model, sequence/track/object model, Add/Remove/Trim commands with inverses, serialization |
+| Project persistence | Partial — versioned manifest, atomic save with recovery rotation, save/reopen verified |
+| Shared UI | Not started — blocked on desktop toolchain |
+| Desktop native media bridge | Not started — blocked on MSVC build tools + Rust |
 | Android/DeX adapter | Not started |
 | AI provider selection | Unresolved |
 | Connector adapters | Not started |
-| Test fixtures | Not started |
+| Test fixtures | Partial — synthetic 8s H.264/AAC F1/F2 committed; 10-min F3 reproducible via generator |
 | Release pipeline | Not started |
 
 ## 5. Current locked scope
@@ -73,14 +76,29 @@ See [`decisions.md`](decisions.md).
 
 ## 6. Immediate recommended work
 
-1. Scaffold monorepo.
-2. Add formatting, lint, type-check, and test commands.
-3. Add minimal shared media contract.
+Completed in the current M1 pass (branch `spike/windows-media-vertical-slice`):
+
+1. ~~Scaffold monorepo.~~ Done.
+2. ~~Add formatting, lint, type-check, and test commands.~~ Done.
+3. ~~Add minimal shared media contract.~~ Done.
+6. ~~Create legal, synthetic certified media fixture.~~ Short fixture done and
+   committed; the 10-minute F3 fixture is generated on demand.
+
+Remaining, blocked on the desktop toolchain (MSVC C++ build tools + Rust):
+
 4. Add Tauri Windows shell.
 5. Add Rust FFprobe/FFmpeg capability spike.
-6. Create legal, synthetic 10-minute certified media fixture.
 7. Implement inspect → proxy → preview → trim → export → validate vertical slice.
-8. Record benchmark outcome and update architecture decision if needed.
+8. Record benchmark outcome and update `DEC-ARCH-003` if needed.
+
+### Evidence so far
+
+- `pnpm check` green: format, lint (incl. domain dependency-boundary rules), typecheck, 27 tests.
+- Gate B evidence: undo determinism, trim source-bounds rejection, save/reopen round-trip,
+  failed-save leaves the prior `project.json` valid.
+- Media evidence: `ffprobe` output validated through the inspect schema against the
+  committed fixture (container, duration tolerance, codec, resolution, CFR, audio).
+- Not yet evidenced: proxy, preview, export, output validation, A/V drift, Rust benchmark.
 
 ## 7. Current risks
 
@@ -94,15 +112,14 @@ See [`known-issues.md`](known-issues.md). Highest near-term risks:
 
 ## 8. Branch
 
-No implementation branch has been created.
-
-Suggested next branch:
+Active implementation branch:
 
 ```text
 spike/windows-media-vertical-slice
 ```
 
-Creating the branch is allowed. Committing or pushing requires direct instruction.
+Commits on this branch were made under direct user instruction. The GitHub remote has not
+been created yet — it is pending GitHub CLI authentication.
 
 ## 9. Update rules
 
