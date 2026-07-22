@@ -11,9 +11,20 @@
 
 **M0 — Governance and Contracts: Complete**
 **M1 — Technical Vertical Slice: Complete** (merged to `main` 2026-07-22, PR #1)
+**M2 — Project System and Editor Shell: Complete** (merged to `main`, PR #2)
+**M3 — Timeline kernel (domain): Complete** (PR #4, pre-approved) — editor timeline **UI** still pending
 
-M1 exit criteria met and evidenced; the required architecture spike is recorded in
-`decisions.md` DEC-ARCH-009 and ISSUE-002 is closed.
+M1/M2 exit criteria met and evidenced. M3 exit criteria met at the domain level
+(`packages/timeline-domain/src/exit-criteria.test.ts`): a multi-track edit survives
+serialize/reopen and every command has deterministic undo/redo. The M3 domain kernel provides
+move, split, standard + ripple trim (out point), standard + ripple delete, insert, overwrite,
+snapping, linked A/V, track lock/mute/solo, undo/redo history, markers, and nested sequences —
+100 tests. **Remaining for M3:** the editor timeline UI (playhead, zoom/scroll, selection
+rendering) in `apps/editor`; ripple trim of the in-point is deferred by decision.
+
+An agent organization was adopted (PR #3, `docs/engineering/agent-organization.md`,
+DEC-GOV-007): CEO → two department heads → package-scoped specialists, with product-acceptance
+QA split from reliability QA.
 
 ## 3. Next milestone
 

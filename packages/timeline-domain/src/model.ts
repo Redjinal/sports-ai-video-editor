@@ -45,10 +45,12 @@ export interface TimelineObjectBase {
   metadata?: Record<string, unknown>;
 }
 
-/** A clip that references a range of a source asset (timeline-domain.md §9). */
-export interface SourceClip extends TimelineObjectBase {
-  kind: "clip";
-  assetId: string;
+/**
+ * Fields shared by any object that maps a timeline span onto a range of an underlying source
+ * (an asset clip or a nested sequence). Editing commands operate on this shape, so move / trim
+ * / split are identical for both object kinds.
+ */
+export interface RangedObject extends TimelineObjectBase {
   /** In-point within the source, in source ticks. */
   sourceInTicks: Ticks;
   /** Consumed source duration; with rate 1 this equals durationTicks. */
@@ -57,7 +59,20 @@ export interface SourceClip extends TimelineObjectBase {
   playbackRate: 0.25 | 0.5 | 1 | 2;
 }
 
-export type TimelineObject = SourceClip;
+/** A clip that references a range of a source asset (timeline-domain.md §9). */
+export interface SourceClip extends RangedObject {
+  kind: "clip";
+  assetId: string;
+}
+
+/** An instance of another sequence placed on the timeline (timeline-domain.md §8, DEC-EDIT-005). */
+export interface NestedSequenceObject extends RangedObject {
+  kind: "nested";
+  /** Id of the child sequence this instance renders. */
+  sequenceId: string;
+}
+
+export type TimelineObject = SourceClip | NestedSequenceObject;
 
 export interface Marker {
   id: string;
