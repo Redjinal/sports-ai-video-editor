@@ -1,0 +1,16 @@
+[package]
+name = "desktop-media"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Windows desktop media adapter: FFprobe inspection, FFmpeg proxy/export, progress, cancellation, and output validation."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
