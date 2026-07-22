@@ -179,6 +179,20 @@
 - **Resolution condition:** Pin and bundle a known FFmpeg build with the installer, record its
   version in diagnostics, and re-run the media certification matrix against it.
 
+### ISSUE-021 — Two implementations of the project repository
+
+- **Severity:** Medium
+- **Area:** Persistence/architecture
+- **Impact:** `packages/persistence/FileProjectRepository` (`node:fs`) and
+  `native/desktop-storage` (Rust) both implement project save/open. Only the Rust one ships;
+  the Node one is what `tests/integration` exercises. They can drift, so a green integration
+  test could describe behaviour the app does not have.
+- **Current handling:** `DEC-ARCH-010` names the Rust crate authoritative. The Rust crate has
+  its own lifecycle tests covering the same invariants.
+- **Resolution condition:** Either reduce the Node repository to an explicitly documented
+  test/tooling adapter with the integration tests re-pointed at the shipping path, or delete
+  it and move those tests to the Rust crate.
+
 ## 3. Resolved items
 
 ### ISSUE-002 — Rust desktop orchestration is conditional — **RESOLVED 2026-07-22**
