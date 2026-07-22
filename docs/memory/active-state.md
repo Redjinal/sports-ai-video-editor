@@ -17,7 +17,46 @@ M1 exit criteria met and evidenced; the required architecture spike is recorded 
 
 ## 3. Next milestone
 
-**M2 — Project System and Editor Shell**
+**M2 — Project System and Editor Shell: implemented, awaiting review**
+
+### M2 exit criteria — MET
+
+*"A project can be created, saved, closed, reopened, recovered, duplicated, and relinked
+without losing timeline state."*
+
+Driven as one continuous sequence against the shipping storage path
+(`cargo test -p desktop-storage --test exit_criteria`): create → save an edit → reopen →
+recover a pre-edit snapshot as a copy → duplicate → move the media offline → relink. Every
+step asserts the timeline object is unchanged, and the project is verified to survive total
+loss of the SQLite index.
+
+### Gate evidence
+
+- **Gate B:** 17 storage tests against real files — atomic save, a rejected save leaving the
+  previous project openable, recovery rotation and recover-as-copy, duplicate, delete
+  refusing a non-project folder, schema-too-new refusal, `..` path rejection,
+  missing-media/relink, index rebuildability.
+- **Gate A / interface:** 23 DOM tests — keyboard-operable panel separators with ARIA value
+  and orientation, min-size refusal, collapse with `aria-expanded`, delete requiring an
+  explicit confirmation that names the folder, a missing project folder disabling Open, and
+  save failures surfacing rather than reporting success.
+- **Autosave:** 8 tests — idle snapshot, safety cadence, flush-before-risky-operation, a
+  failed autosave staying dirty, and an edit arriving mid-write not being swallowed.
+- **Viewport:** the app was resized to exactly 1280×800 (client 1265×762) and rendered with
+  all controls visible and no clipped content.
+- Totals: `pnpm check` 59 tests; `cargo test` 25 tests; clippy `-D warnings` and fmt clean.
+
+### Not verified
+
+- No human has driven the full flow through the GUI; the exit-criteria sequence is proven at
+  the storage layer and the UI is proven by DOM tests, but the two have not been exercised
+  together by hand.
+- Horizontal-overflow at 1280×800 was judged visually, not measured programmatically.
+- Carried from M1: preview A/V sync has no impulse-based drift measurement.
+
+---
+
+**Original M2 definition**
 
 Deliverables: Project Hub, New Project, local folder layout, versioned manifest, SQLite
 index, project open/close, manual save, autosave and recovery, duplicate and delete,

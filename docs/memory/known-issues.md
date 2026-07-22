@@ -179,21 +179,20 @@
 - **Resolution condition:** Pin and bundle a known FFmpeg build with the installer, record its
   version in diagnostics, and re-run the media certification matrix against it.
 
-### ISSUE-021 — Two implementations of the project repository
-
-- **Severity:** Medium
-- **Area:** Persistence/architecture
-- **Impact:** `packages/persistence/FileProjectRepository` (`node:fs`) and
-  `native/desktop-storage` (Rust) both implement project save/open. Only the Rust one ships;
-  the Node one is what `tests/integration` exercises. They can drift, so a green integration
-  test could describe behaviour the app does not have.
-- **Current handling:** `DEC-ARCH-010` names the Rust crate authoritative. The Rust crate has
-  its own lifecycle tests covering the same invariants.
-- **Resolution condition:** Either reduce the Node repository to an explicitly documented
-  test/tooling adapter with the integration tests re-pointed at the shipping path, or delete
-  it and move those tests to the Rust crate.
-
 ## 3. Resolved items
+
+### ISSUE-021 — Two implementations of the project repository — **RESOLVED 2026-07-22**
+
+- **Severity when open:** Medium
+- **Problem:** `packages/persistence/FileProjectRepository` (`node:fs`) and
+  `native/desktop-storage` (Rust) both implemented project save/open. Only the Rust one ships,
+  yet the Node one was what `tests/integration` exercised — so a green integration test could
+  have described behaviour the app does not have.
+- **Resolution:** The `node:fs` repository and its tests were removed. `@sve/persistence` now
+  holds only the repository interface and pure serialization; `tests/integration` exercises the
+  platform-neutral path (edit → stable serialize → schema re-validate → undo), and all file I/O
+  is covered by `native/desktop-storage` tests against real files.
+- **Reference:** `DEC-ARCH-010`; `native/desktop-storage/tests/{project_lifecycle,exit_criteria}.rs`.
 
 ### ISSUE-002 — Rust desktop orchestration is conditional — **RESOLVED 2026-07-22**
 
