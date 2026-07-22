@@ -22,15 +22,6 @@
 - **Current handling:** Use “Sports-Aware AI Video Editor” as a working title; avoid embedding it in schemas.
 - **Resolution condition:** User accepts a permanent name and brand decision.
 
-### ISSUE-002 — Rust desktop orchestration is conditional
-
-- **Severity:** High
-- **Area:** Architecture
-- **Impact:** Native package structure and maintenance depend on the M1 result.
-- **Current handling:** Rust/Tauri is selected for the vertical slice.
-- **Required evidence:** Process control, progress, cancellation, IPC, packaging, crash isolation, and maintenance comparison.
-- **Resolution condition:** Record benchmark outcome and confirm or supersede `DEC-ARCH-003`.
-
 ### ISSUE-003 — DeX media capability is unvalidated
 
 - **Severity:** High
@@ -81,11 +72,15 @@
 
 ### ISSUE-009 — Large legal media fixtures are not prepared
 
-- **Severity:** High
+- **Severity:** Medium (was High)
 - **Area:** Testing
 - **Impact:** M1 and long-form certification cannot run reproducibly.
-- **Current handling:** Require synthetic or explicitly licensed fixtures.
-- **Resolution condition:** Generate/checksum F1–F5 fixtures and document storage.
+- **Current handling:** `tools/fixtures/generate-fixtures.mjs` produces synthetic, legally
+  clean H.264/AAC fixtures from FFmpeg's own sources. An 8 s F1/F2 fixture is committed and
+  checksummed; the 10-minute F3 fixture is generated on demand and git-ignored. Both are
+  documented in `fixtures/media/README.md`.
+- **Resolution condition:** Extend the generator to F4 (30 min, multicamera) and F5
+  (120 min, 2K, four cameras), and document long-term storage for anything not regenerable.
 
 ### ISSUE-010 — Exact proxy encoding parameters are not benchmarked
 
@@ -159,9 +154,51 @@
 - **Current handling:** Report external fonts and keep licensing responsibility with user.
 - **Resolution condition:** Test common font scenarios and refine package warnings.
 
+### ISSUE-019 — Desktop asset-protocol scope is unrestricted
+
+- **Severity:** Medium
+- **Area:** Security/desktop
+- **Impact:** `apps/desktop/src-tauri/tauri.conf.json` enables the Tauri asset protocol with
+  scope `["**"]` so the preview player can read proxies from arbitrary user paths. That is
+  broader than least privilege and would let any page loaded in the webview read any file
+  the user can read.
+- **Current handling:** Acceptable for a local single-user M1 prototype with a
+  locked-down CSP and no remote content loaded.
+- **Resolution condition:** Narrow the scope to the project/proxy/managed directories before
+  any external release or before the webview ever loads third-party content.
+
+### ISSUE-020 — FFmpeg is discovered, not bundled
+
+- **Severity:** Medium
+- **Area:** Media/packaging
+- **Impact:** The desktop adapter resolves `ffmpeg`/`ffprobe` from PATH (overridable via
+  `SVE_FFMPEG_PATH`/`SVE_FFPROBE_PATH`). A packaged build cannot assume the user has FFmpeg,
+  and an unpinned build changes encoder behaviour underneath the certification matrix.
+- **Current handling:** Lookup is centralised in `native/desktop-media/src/ffbin.rs`, and the
+  app reports availability before any job starts.
+- **Resolution condition:** Pin and bundle a known FFmpeg build with the installer, record its
+  version in diagnostics, and re-run the media certification matrix against it.
+
 ## 3. Resolved items
 
-None yet. Move resolved items here with resolution date and decision/test reference rather than deleting them.
+### ISSUE-002 — Rust desktop orchestration is conditional — **RESOLVED 2026-07-22**
+
+- **Severity when open:** High
+- **Resolution:** M1 spike completed, including the comparative benchmark against a Node
+  orchestration implementation. Measured parity on every axis (metadata throughput,
+  cancellation latency, IPC payload, crash isolation) — there is **no measurable performance
+  or safety benefit to Rust**, because all measured work is dominated by the identical
+  FFmpeg/FFprobe child processes.
+- **Outcome:** `DEC-ARCH-003` is confirmed by `DEC-ARCH-009`, but with a corrected rationale:
+  Rust is retained because Tauri already mandates the toolchain and because
+  `technical-architecture.md` §6.1 forbids the UI process from executing FFmpeg — not for speed.
+- **Reference:** `docs/memory/decisions.md` DEC-ARCH-009;
+  `native/desktop-media/tests/benchmark.rs`; `tools/benchmark/node-orchestration.mjs`.
+- **Side effect:** the spike exposed a real cancellation defect (cancel was only observed when
+  FFmpeg emitted a progress line, so a stalled encode could never be cancelled). Fixed with an
+  independent watcher thread; latency improved 203 ms → 49.9 ms.
+- **Re-open condition:** if the desktop shell moves off Tauri, the justification no longer
+  holds and the decision must be revisited.
 
 ## 4. Waivers
 

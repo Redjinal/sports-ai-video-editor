@@ -62,12 +62,58 @@
 |---|---|---|---|---|
 | DEC-ARCH-001 | 2026-07-22 | Accepted | Use a monorepo. | Shared domains and two platform shells need coordinated evolution. |
 | DEC-ARCH-002 | 2026-07-22 | Accepted | Shared UI uses React and TypeScript. | Supports a common desktop/DeX interface and strong domain contracts. |
-| DEC-ARCH-003 | 2026-07-22 | Accepted, conditional | Use Tauri with Rust for the Windows native layer, subject to M1 benchmark validation. | Rust is selected for safe native orchestration, not because it determines encode quality. |
+| DEC-ARCH-003 | 2026-07-22 | Accepted, confirmed by [DEC-ARCH-009](#) | Use Tauri with Rust for the Windows native layer, subject to M1 benchmark validation. | Rust is selected for safe native orchestration, not because it determines encode quality. |
 | DEC-ARCH-004 | 2026-07-22 | Accepted | Use Kotlin and an Android-native media adapter for DeX. | Android lifecycle and codec access should remain native. |
 | DEC-ARCH-005 | 2026-07-22 | Accepted | Desktop media processing uses native FFmpeg/FFprobe. | Provides broad inspection and quality-controlled local rendering. |
 | DEC-ARCH-006 | 2026-07-22 | Accepted | DeX uses Android-native media capabilities and compatible proxies rather than assuming desktop FFmpeg parity. | Platform capability differs and must be explicit. |
 | DEC-ARCH-007 | 2026-07-22 | Accepted | Timeline, basketball, project, AI, media, and connector domains remain platform-neutral. | Prevents native/provider lock-in. |
 | DEC-ARCH-008 | 2026-07-22 | Accepted | Portable project truth uses versioned JSON; SQLite is a rebuildable local index. | Balances portability, inspectability, and long-project performance. |
+| DEC-ARCH-009 | 2026-07-22 | Accepted | Retain Rust for desktop media orchestration, confirming `DEC-ARCH-003` — but on process-boundary grounds, **not** performance. | See the M1 spike outcome below. The measured performance case for Rust did not materialise; the architectural case did. |
+
+### DEC-ARCH-009 — M1 spike outcome (closes ISSUE-002)
+
+The roadmap required benchmarking Rust orchestration **against a simpler alternative**. A
+Node implementation (`tools/benchmark/node-orchestration.mjs`) was written to mirror the Rust
+adapter operation for operation — same FFmpeg/FFprobe binaries, same encoder arguments, same
+fingerprint work, same payload.
+
+Measured 2026-07-22 on Windows 11 x86_64, 12 logical CPUs, FFmpeg 8.1.2, Rust in **release**
+(an initial debug-build comparison was discarded as invalid):
+
+| Metric | Rust (release) | Node | Outcome |
+|---|---|---|---|
+| Metadata throughput | 45.3 ms/inspect (22.1/s) | 49.4 ms/inspect (20.2/s) | parity |
+| Cancellation latency | 49.9 ms | 43.6 ms | parity |
+| IPC payload round trip (631 B) | 4.30 µs | 4.2 µs | parity |
+| Crash isolation | structured error, host survives | equivalent | parity |
+
+**Finding: there is no measurable performance, throughput, or safety advantage to Rust here.**
+Every measured operation is dominated by the FFmpeg/FFprobe child processes, which are
+byte-identical in both implementations. The roadmap's stated test — *"Rust remains the selected
+desktop-native layer unless the spike demonstrates a material maintenance penalty without
+measurable quality, safety, or performance benefit"* — therefore turns on the maintenance cost,
+and the Rust toolchain does carry one (MSVC C++ Build Tools is a multi-gigabyte,
+administrator-only install; cold builds take minutes).
+
+Rust is nonetheless retained, for two reasons that the benchmark cannot measure:
+
+1. **The toolchain cost is already sunk.** Tauri is itself Rust (`DEC-ARCH-002`/`DEC-ARCH-003`),
+   so the MSVC requirement exists whether or not orchestration lives in Rust. Moving
+   orchestration to JS would remove none of that cost.
+2. **Process authority must stay out of the webview.** `technical-architecture.md` §6.1 requires
+   that the UI process *never directly execute FFmpeg*. Tauri has no separate Node main
+   process, so the "simpler alternative" would mean granting the webview a shell/process-spawn
+   capability and doing path validation in JS — a materially worse security posture that the
+   architecture explicitly forbids.
+
+The rationale in `DEC-ARCH-003` is corrected accordingly: Rust is retained for **process and
+path containment**, not for speed. If the shell ever moves off Tauri, this decision must be
+re-opened, because its justification would no longer hold.
+
+**Defect found by the spike:** cancellation was originally observed only when FFmpeg emitted a
+progress line, so a stalled or silent encode could never be cancelled (measured 203 ms, and
+unbounded in the stall case). Replaced with an independent watcher thread polling every 20 ms;
+cancellation is now 49.9 ms and works regardless of encoder output.
 
 ## 6. Platform support decisions
 

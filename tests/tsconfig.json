@@ -1,0 +1,7 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["integration/**/*.ts", "media/**/*.ts", "e2e/**/*.ts"]
+}

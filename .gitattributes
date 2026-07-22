@@ -1,0 +1,15 @@
+# Normalize line endings: LF in the repo, checkout native on Windows.
+* text=auto eol=lf
+
+# Binary assets — never normalize.
+*.mp4 binary
+*.mov binary
+*.mkv binary
+*.mp3 binary
+*.wav binary
+*.aac binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary

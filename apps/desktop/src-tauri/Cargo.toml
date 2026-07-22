@@ -1,0 +1,19 @@
+[package]
+name = "sve-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Windows desktop shell for the Sports-Aware AI Video Editor."
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+serde.workspace = true
+serde_json.workspace = true
+desktop-media = { path = "../../../native/desktop-media" }
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

@@ -43,15 +43,18 @@ Required architecture spike:
 | Product documentation | Complete |
 | Architecture documentation | Complete |
 | Engineering/operations documentation | Complete |
-| Repository scaffold | Not started |
-| Shared UI | Not started |
-| Timeline domain implementation | Not started |
-| Project persistence | Not started |
-| Desktop native media bridge | Not started |
+| Version control | Complete — git initialised; GitHub remote pending authentication |
+| Repository scaffold | Complete — pnpm workspace, strict TS, ESLint boundaries, Prettier, Vitest |
+| Quality commands | Complete — `pnpm check` (format, lint, typecheck, test) green |
+| Media contracts | Complete — inspect/proxy/render-plan/export-job DTOs + zod validation |
+| Timeline domain implementation | Partial — tick model, sequence/track/object model, Add/Remove/Trim commands with inverses, serialization |
+| Project persistence | Partial — versioned manifest, atomic save with recovery rotation, save/reopen verified |
+| Shared UI | Partial — M1 slice shell (import/inspect/proxy/preview/place/trim/export/validate) |
+| Desktop native media bridge | Complete for M1 — Tauri v2 shell + Rust FFmpeg/FFprobe adapter |
 | Android/DeX adapter | Not started |
 | AI provider selection | Unresolved |
 | Connector adapters | Not started |
-| Test fixtures | Not started |
+| Test fixtures | Partial — synthetic 8s H.264/AAC F1/F2 committed; 10-min F3 reproducible via generator |
 | Release pipeline | Not started |
 
 ## 5. Current locked scope
@@ -73,14 +76,55 @@ See [`decisions.md`](decisions.md).
 
 ## 6. Immediate recommended work
 
-1. Scaffold monorepo.
-2. Add formatting, lint, type-check, and test commands.
-3. Add minimal shared media contract.
-4. Add Tauri Windows shell.
-5. Add Rust FFprobe/FFmpeg capability spike.
-6. Create legal, synthetic 10-minute certified media fixture.
-7. Implement inspect → proxy → preview → trim → export → validate vertical slice.
-8. Record benchmark outcome and update architecture decision if needed.
+Completed in the current M1 pass (branch `spike/windows-media-vertical-slice`):
+
+1. ~~Scaffold monorepo.~~ Done.
+2. ~~Add formatting, lint, type-check, and test commands.~~ Done.
+3. ~~Add minimal shared media contract.~~ Done.
+6. ~~Create legal, synthetic certified media fixture.~~ Short fixture done and
+   committed; the 10-minute F3 fixture is generated on demand.
+
+4. ~~Add Tauri Windows shell.~~ Done.
+5. ~~Add Rust FFprobe/FFmpeg capability spike.~~ Done.
+7. ~~Implement inspect → proxy → preview → trim → export → validate vertical slice.~~ Done.
+8. ~~Record benchmark outcome and update `DEC-ARCH-003` if needed.~~ Done — comparative
+   benchmark run against a Node orchestration implementation; `DEC-ARCH-003` confirmed by
+   `DEC-ARCH-009` on process-boundary grounds (not performance); ISSUE-002 closed.
+
+### M1 exit criteria — MET
+
+Roadmap §5: *"A ten-minute H.264/AAC MP4 can be imported, proxied, previewed, trimmed,
+exported, and validated without corruption or material A/V drift."*
+
+Run 2026-07-22 (`cargo test -p desktop-media --test exit_criteria -- --ignored`) on the
+generated 600 s 1080p30 fixture:
+
+| Stage | Result |
+|---|---|
+| Inspect | `certified`, h264 1920×1080 30.000 fps, aac, 600 s, 95 ms |
+| Proxy | 1280×720, 55 s, 108.6 MB, duration preserved 1:1 |
+| Trim + export | 120 s sub-range from 60 s in, 1080p H.264/AAC, 30.7 s |
+| Validate | all 12 required checks passed, 3.0 s |
+| Duration drift | **0 ticks** (one frame = 900,000 ticks) |
+
+### Evidence
+
+- `pnpm check` green: format, lint (incl. domain dependency-boundary rules), typecheck, 27 tests.
+- `cargo test` green: 8 tests (3 unit + 5 pipeline); `cargo clippy -D warnings` and
+  `cargo fmt --check` clean for both crates.
+- Gate B: undo determinism, trim source-bounds rejection, save/reopen round-trip,
+  failed-save leaves the prior `project.json` valid.
+- Gate C: inspect/proxy/export/validate on real media; **a truncated render is rejected**;
+  cancellation unwinds and leaves no partial file.
+- App launches with a responding 1440×900 window and renders all four slice stages.
+
+### Not yet evidenced
+
+- Preview playback and A/V sync were **not** verified by a human watching the proxy; only
+  durations and decodability are machine-checked. No impulse-based drift measurement yet.
+- No GUI click-through of the full flow was performed — the pipeline is proven at the
+  library/IPC level, not through the rendered controls.
+- Nothing merged to `main`; the slice lives on the spike branch pending review.
 
 ## 7. Current risks
 
@@ -94,15 +138,14 @@ See [`known-issues.md`](known-issues.md). Highest near-term risks:
 
 ## 8. Branch
 
-No implementation branch has been created.
-
-Suggested next branch:
+Active implementation branch:
 
 ```text
 spike/windows-media-vertical-slice
 ```
 
-Creating the branch is allowed. Committing or pushing requires direct instruction.
+Commits on this branch were made under direct user instruction. The GitHub remote has not
+been created yet — it is pending GitHub CLI authentication.
 
 ## 9. Update rules
 
