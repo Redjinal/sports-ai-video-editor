@@ -10,31 +10,43 @@
 ## 2. Current milestone
 
 **M0 — Governance and Contracts: Complete**
+**M1 — Technical Vertical Slice: Complete** (merged to `main` 2026-07-22, PR #1)
 
-The full authoritative Markdown baseline has been created.
+M1 exit criteria met and evidenced; the required architecture spike is recorded in
+`decisions.md` DEC-ARCH-009 and ISSUE-002 is closed.
 
 ## 3. Next milestone
 
-**M1 — Technical Vertical Slice**
+**M2 — Project System and Editor Shell**
 
-Goal:
+Deliverables: Project Hub, New Project, local folder layout, versioned manifest, SQLite
+index, project open/close, manual save, autosave and recovery, duplicate and delete,
+missing-media detection, relinking, editor shell, resizable/collapsible panels, minimum
+DeX viewport behaviour.
 
-- Create Windows Tauri shell
-- Create React/TypeScript UI
-- Establish Rust native bridge
-- Inspect one H.264/AAC MP4
-- Generate one proxy
-- Preview one clip
-- Place and trim on a minimal timeline
-- Export H.264/AAC MP4
-- Validate output
+Exit criteria: *a project can be created, saved, closed, reopened, recovered, duplicated,
+and relinked without losing timeline state.* Gate: Timeline/Persistence Gate B plus
+interface checks.
 
-Required architecture spike:
+Already in place from M1 (reuse, do not rebuild):
 
-- Benchmark Rust orchestration value and maintenance cost
-- Confirm FFmpeg packaging and structured progress
-- Confirm cancellation and cleanup
-- Record result before broad native implementation
+- Versioned manifest + schema validation — `@sve/project-domain`
+- Local folder layout (`project.json`, `operations/`, `autosaves/`) and atomic save with
+  recovery rotation + journal checkpoint — `@sve/persistence`
+- Timeline model and reversible commands — `@sve/timeline-domain`
+- Asset record with `online | offline | proxy_only | invalid` status, ready for
+  missing-media detection and relinking
+
+Not yet built for M2: SQLite index, autosave scheduling/recovery UX, duplicate/delete,
+missing-media detection, relinking, Project Hub and New Project screens, and the resizable
+editor shell.
+
+### Carried over from M1 (not blocking M2)
+
+- A/V sync is only machine-checked by duration; no impulse-based drift measurement exists,
+  and no human has watched the preview.
+- No GUI click-through of the slice has been performed.
+- ISSUE-019 (asset-protocol scope `**`) and ISSUE-020 (FFmpeg discovered, not bundled).
 
 ## 4. Implementation status
 
@@ -138,14 +150,16 @@ See [`known-issues.md`](known-issues.md). Highest near-term risks:
 
 ## 8. Branch
 
-Active implementation branch:
+`spike/windows-media-vertical-slice` was merged to `main` via PR #1 on 2026-07-22.
+`main` is the current baseline; no implementation branch is open.
+
+Remote: https://github.com/Redjinal/sports-ai-video-editor (public).
+
+Suggested next branch:
 
 ```text
-spike/windows-media-vertical-slice
+feature/m2-project-system
 ```
-
-Commits on this branch were made under direct user instruction. The GitHub remote has not
-been created yet — it is pending GitHub CLI authentication.
 
 ## 9. Update rules
 
