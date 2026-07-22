@@ -5,11 +5,16 @@
 //! - long work reports structured progress and supports cancellation by flag
 //! - output is written to a unique temp path and only moved into place after success
 
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+/// How often the cancellation watcher checks the flag. Small enough that a user-visible
+/// cancel feels immediate, large enough to stay off the CPU during long renders.
+const CANCEL_POLL_INTERVAL: Duration = Duration::from_millis(20);
 
 use crate::error::{MediaError, MediaErrorCode, Result};
 use crate::ffbin::ffmpeg_path;
@@ -61,18 +66,44 @@ fn run_ffmpeg(
                 .with_job(job_id)
         })?;
 
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    // Collect stderr on its own thread so a full pipe buffer can never deadlock the encode.
+    let stderr_handle = stderr.map(|err| {
+        std::thread::spawn(move || {
+            let mut buf = String::new();
+            let _ = BufReader::new(err).read_to_string(&mut buf);
+            buf
+        })
+    });
+
+    // Cancellation is watched independently of progress output. Polling the flag inside the
+    // stdout loop would only observe a cancel when FFmpeg happens to emit a line, so a
+    // stalled or silent encode could never be cancelled at all.
+    let child = Arc::new(Mutex::new(child));
+    let finished = Arc::new(AtomicBool::new(false));
+    let watcher = {
+        let child = Arc::clone(&child);
+        let cancel = Arc::clone(cancel);
+        let finished = Arc::clone(&finished);
+        std::thread::spawn(move || {
+            while !finished.load(Ordering::Relaxed) {
+                if cancel.load(Ordering::Relaxed) {
+                    if let Ok(mut c) = child.lock() {
+                        let _ = c.kill();
+                    }
+                    return;
+                }
+                std::thread::sleep(CANCEL_POLL_INTERVAL);
+            }
+        })
+    };
+
     // -progress writes key=value lines to stdout; parse them instead of scraping the log.
-    if let Some(stdout) = child.stdout.take() {
+    if let Some(stdout) = stdout {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
-            if cancel.load(Ordering::Relaxed) {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(
-                    MediaError::new(MediaErrorCode::ExportCancelled, "Export cancelled.")
-                        .with_job(job_id),
-                );
-            }
             let Ok(line) = line else { break };
             if let Some(value) = line.strip_prefix("out_time_us=") {
                 if let Ok(us) = value.trim().parse::<i64>() {
@@ -89,11 +120,21 @@ fn run_ffmpeg(
         }
     }
 
-    let output = child.wait_with_output().map_err(|e| {
-        MediaError::new(failure_code, "The media encoder did not finish cleanly.")
-            .with_cause(e.to_string())
-            .with_job(job_id)
-    })?;
+    let status = {
+        let mut guard = child.lock().map_err(|_| {
+            MediaError::new(failure_code, "The media encoder state was lost.").with_job(job_id)
+        })?;
+        guard.wait().map_err(|e| {
+            MediaError::new(failure_code, "The media encoder did not finish cleanly.")
+                .with_cause(e.to_string())
+                .with_job(job_id)
+        })?
+    };
+    finished.store(true, Ordering::Relaxed);
+    let _ = watcher.join();
+    let stderr_text = stderr_handle
+        .and_then(|h| h.join().ok())
+        .unwrap_or_default();
 
     if cancel.load(Ordering::Relaxed) {
         return Err(
@@ -101,8 +142,8 @@ fn run_ffmpeg(
         );
     }
 
-    if !output.status.success() {
-        let tail: String = String::from_utf8_lossy(&output.stderr)
+    if !status.success() {
+        let tail: String = stderr_text
             .lines()
             .rev()
             .take(6)

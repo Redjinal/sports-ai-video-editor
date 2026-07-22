@@ -22,23 +22,6 @@
 - **Current handling:** Use “Sports-Aware AI Video Editor” as a working title; avoid embedding it in schemas.
 - **Resolution condition:** User accepts a permanent name and brand decision.
 
-### ISSUE-002 — Rust desktop orchestration is conditional
-
-- **Severity:** Medium (was High)
-- **Area:** Architecture
-- **Impact:** Native package structure and maintenance depend on the M1 result.
-- **Current handling:** Rust/Tauri implemented and exercised through the M1 vertical slice.
-- **Evidence recorded 2026-07-22** (Windows 11, x86_64, 12 logical CPUs, debug build, FFmpeg 8.1.2 — not certified reference hardware, see ISSUE-004):
-  - Metadata throughput: ~95 ms per inspect (~10.5/s); dominated by FFprobe process start, not by Rust.
-  - Cancellation latency: ~220 ms from flag to unwound job, with no partial file left behind.
-  - IPC payload: 631-byte inspect result, ~59 µs serialise+parse round trip.
-  - Crash isolation: a failing/missing input returns a structured error; the host process survives.
-  - Process control and structured progress via `-progress pipe:1` work as designed.
-- **Still outstanding:** the roadmap asks for a comparison **against simpler alternatives**
-  (e.g. orchestrating FFmpeg from the JS side). That comparative benchmark has **not** been
-  run, so `DEC-ARCH-003` remains *accepted, conditional* rather than confirmed.
-- **Resolution condition:** Run the comparative benchmark, then confirm or supersede `DEC-ARCH-003`.
-
 ### ISSUE-003 — DeX media capability is unvalidated
 
 - **Severity:** High
@@ -198,7 +181,24 @@
 
 ## 3. Resolved items
 
-None yet. Move resolved items here with resolution date and decision/test reference rather than deleting them.
+### ISSUE-002 — Rust desktop orchestration is conditional — **RESOLVED 2026-07-22**
+
+- **Severity when open:** High
+- **Resolution:** M1 spike completed, including the comparative benchmark against a Node
+  orchestration implementation. Measured parity on every axis (metadata throughput,
+  cancellation latency, IPC payload, crash isolation) — there is **no measurable performance
+  or safety benefit to Rust**, because all measured work is dominated by the identical
+  FFmpeg/FFprobe child processes.
+- **Outcome:** `DEC-ARCH-003` is confirmed by `DEC-ARCH-009`, but with a corrected rationale:
+  Rust is retained because Tauri already mandates the toolchain and because
+  `technical-architecture.md` §6.1 forbids the UI process from executing FFmpeg — not for speed.
+- **Reference:** `docs/memory/decisions.md` DEC-ARCH-009;
+  `native/desktop-media/tests/benchmark.rs`; `tools/benchmark/node-orchestration.mjs`.
+- **Side effect:** the spike exposed a real cancellation defect (cancel was only observed when
+  FFmpeg emitted a progress line, so a stalled encode could never be cancelled). Fixed with an
+  independent watcher thread; latency improved 203 ms → 49.9 ms.
+- **Re-open condition:** if the desktop shell moves off Tauri, the justification no longer
+  holds and the decision must be revisited.
 
 ## 4. Waivers
 

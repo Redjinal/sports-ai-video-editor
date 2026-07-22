@@ -59,7 +59,13 @@ export default tseslint.config(
     // Node-run developer tooling scripts.
     files: ["tools/**/*.mjs", "tools/**/*.js"],
     languageOptions: {
-      globals: { process: "readonly", console: "readonly" },
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
     },
   },
   {

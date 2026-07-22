@@ -87,8 +87,9 @@ Completed in the current M1 pass (branch `spike/windows-media-vertical-slice`):
 4. ~~Add Tauri Windows shell.~~ Done.
 5. ~~Add Rust FFprobe/FFmpeg capability spike.~~ Done.
 7. ~~Implement inspect → proxy → preview → trim → export → validate vertical slice.~~ Done.
-8. Benchmark recorded; `DEC-ARCH-003` stays *conditional* pending the comparison against a
-   simpler alternative (see ISSUE-002).
+8. ~~Record benchmark outcome and update `DEC-ARCH-003` if needed.~~ Done — comparative
+   benchmark run against a Node orchestration implementation; `DEC-ARCH-003` confirmed by
+   `DEC-ARCH-009` on process-boundary grounds (not performance); ISSUE-002 closed.
 
 ### M1 exit criteria — MET
 
@@ -123,8 +124,7 @@ generated 600 s 1080p30 fixture:
   durations and decodability are machine-checked. No impulse-based drift measurement yet.
 - No GUI click-through of the full flow was performed — the pipeline is proven at the
   library/IPC level, not through the rendered controls.
-- Rust-vs-alternative comparative benchmark not run (ISSUE-002).
-- Nothing merged to `main`; the slice lives on the spike branch.
+- Nothing merged to `main`; the slice lives on the spike branch pending review.
 
 ## 7. Current risks
 
