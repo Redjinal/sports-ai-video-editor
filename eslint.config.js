@@ -56,6 +56,13 @@ export default tseslint.config(
     },
   },
   {
+    // Node-run developer tooling scripts.
+    files: ["tools/**/*.mjs", "tools/**/*.js"],
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly" },
+    },
+  },
+  {
     // Dependency-boundary guard for platform-neutral domains + contracts.
     files: [
       "packages/timeline-domain/**/*.ts",

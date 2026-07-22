@@ -15,10 +15,10 @@
     "typecheck": "pnpm -r --parallel exec tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "vitest run --dir tests/integration",
+    "test:integration": "vitest run tests/integration",
     "test:e2e": "echo \"[test:e2e] no e2e harness yet (added with the Tauri shell in M1 Task 3)\" && exit 0",
     "test:visual": "echo \"[test:visual] no visual harness yet (added in M2/M3)\" && exit 0",
-    "test:media": "vitest run --dir tests/media",
+    "test:media": "vitest run tests/media",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

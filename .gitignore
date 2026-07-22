@@ -36,8 +36,10 @@ credentials.json
 *.mp3
 *.wav
 *.aac
-# ...but allow checked-in synthetic test fixtures
+# ...but allow small checked-in synthetic test fixtures
 !fixtures/media/**
+# ...except large generated fixtures, which are reproducible from the generator script
+fixtures/media/generated/
 
 # Logs / diagnostics
 *.log
