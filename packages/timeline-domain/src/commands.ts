@@ -2,7 +2,7 @@
 // Every mutation is an atomic command with a deterministic inverse. apply is a pure
 // function of (sequence, command): it never reads UI selection and never mutates input.
 // A failing command throws and does not enter history.
-import type { Sequence, SourceClip, TimelineObject } from "./model";
+import type { Marker, Sequence, TimelineObject } from "./model";
 import { type Ticks, asTicks, endTicks, ZERO_TICKS } from "./ticks";
 
 export interface CommandMeta {
@@ -17,7 +17,7 @@ export interface CommandMeta {
 export interface AddObjectCommand {
   type: "AddObject";
   meta: CommandMeta;
-  object: SourceClip;
+  object: TimelineObject;
 }
 
 export interface RemoveObjectCommand {
@@ -58,6 +58,18 @@ export interface SplitObjectCommand {
 }
 
 /**
+ * Shift a set of objects by a signed tick delta on their current tracks. The primitive that
+ * ripple/insert operations build on: the whole set moves together, so their internal spacing
+ * is preserved, and the moved block is collision-checked against objects NOT in the set.
+ */
+export interface ShiftObjectsCommand {
+  type: "ShiftObjects";
+  meta: CommandMeta;
+  objectIds: string[];
+  deltaTicks: number;
+}
+
+/**
  * Atomic group of commands (timeline-domain.md §34). Either every sub-command applies or
  * none do — a failure in any leaves the input sequence untouched. Its inverse is the
  * reversed list of sub-inverses, so undo of a batch is itself a batch.
@@ -68,12 +80,47 @@ export interface BatchCommand {
   commands: TimelineCommand[];
 }
 
+/** Toggleable track flags (timeline-domain.md §18). Lock is enforced by edit commands. */
+export type TrackFlag = "locked" | "hidden" | "muted" | "solo";
+
+export interface SetTrackFlagCommand {
+  type: "SetTrackFlag";
+  meta: CommandMeta;
+  trackId: string;
+  flag: TrackFlag;
+  value: boolean;
+}
+
+export interface AddMarkerCommand {
+  type: "AddMarker";
+  meta: CommandMeta;
+  marker: Marker;
+}
+
+export interface RemoveMarkerCommand {
+  type: "RemoveMarker";
+  meta: CommandMeta;
+  markerId: string;
+}
+
+export interface MoveMarkerCommand {
+  type: "MoveMarker";
+  meta: CommandMeta;
+  markerId: string;
+  toTicks: Ticks;
+}
+
 export type TimelineCommand =
   | AddObjectCommand
   | RemoveObjectCommand
   | TrimObjectCommand
   | MoveObjectCommand
   | SplitObjectCommand
+  | ShiftObjectsCommand
+  | SetTrackFlagCommand
+  | AddMarkerCommand
+  | RemoveMarkerCommand
+  | MoveMarkerCommand
   | BatchCommand;
 
 export interface CommandContext {
@@ -98,14 +145,16 @@ export class CommandError extends Error {
       | "TIMELINE_SOURCE_OUT_OF_BOUNDS"
       | "TIMELINE_TRACK_LOCKED"
       | "TIMELINE_COLLISION"
-      | "TIMELINE_SPLIT_OUT_OF_RANGE",
+      | "TIMELINE_SPLIT_OUT_OF_RANGE"
+      | "TIMELINE_MARKER_NOT_FOUND"
+      | "TIMELINE_MARKER_EXISTS",
   ) {
     super(message);
     this.name = "CommandError";
   }
 }
 
-function requireClip(seq: Sequence, objectId: string): SourceClip {
+function requireObject(seq: Sequence, objectId: string): TimelineObject {
   const obj = seq.objects.find((o) => o.id === objectId);
   if (!obj) {
     throw new CommandError(`Object ${objectId} not found`, "TIMELINE_OBJECT_NOT_FOUND");
@@ -157,12 +206,12 @@ function assertNoCollision(
 }
 
 /** Source ticks consumed for a given (non-negative) timeline-duration at a playback rate. */
-function sourceSpan(timelineTicks: Ticks, rate: SourceClip["playbackRate"]): Ticks {
+function sourceSpan(timelineTicks: Ticks, rate: TimelineObject["playbackRate"]): Ticks {
   return asTicks(Math.round(timelineTicks * rate));
 }
 
 /** Signed source-tick delta for a signed timeline-tick delta (may be negative). */
-function signedSourceDelta(timelineDelta: number, rate: SourceClip["playbackRate"]): number {
+function signedSourceDelta(timelineDelta: number, rate: TimelineObject["playbackRate"]): number {
   return Math.round(timelineDelta * rate);
 }
 
@@ -185,7 +234,9 @@ function applyAdd(seq: Sequence, cmd: AddObjectCommand, ctx: CommandContext): Co
   if (object.durationTicks <= ZERO_TICKS) {
     throw new CommandError("Object duration must be > 0", "TIMELINE_ZERO_DURATION");
   }
-  const bounds = ctx.assetBounds?.get(object.assetId);
+  // Asset source bounds apply to clips; nested-sequence instances are bounded by their child
+  // sequence, which is validated separately.
+  const bounds = object.kind === "clip" ? ctx.assetBounds?.get(object.assetId) : undefined;
   if (bounds !== undefined) {
     const sourceEnd = endTicks(object.sourceInTicks, object.sourceDurationTicks);
     if (object.sourceInTicks < ZERO_TICKS || sourceEnd > bounds) {
@@ -205,7 +256,7 @@ function applyAdd(seq: Sequence, cmd: AddObjectCommand, ctx: CommandContext): Co
 }
 
 function applyRemove(seq: Sequence, cmd: RemoveObjectCommand): CommandResult {
-  const object = requireClip(seq, cmd.objectId);
+  const object = requireObject(seq, cmd.objectId);
   const sequence: Sequence = {
     ...seq,
     objects: seq.objects.filter((o) => o.id !== cmd.objectId),
@@ -219,9 +270,9 @@ function applyRemove(seq: Sequence, cmd: RemoveObjectCommand): CommandResult {
 }
 
 function applyTrim(seq: Sequence, cmd: TrimObjectCommand, ctx: CommandContext): CommandResult {
-  const clip = requireClip(seq, cmd.objectId);
+  const clip = requireObject(seq, cmd.objectId);
   const delta = cmd.deltaTicks;
-  let next: SourceClip;
+  let next: TimelineObject;
 
   if (cmd.edge === "end") {
     // Standard trim of the tail: change duration; later objects do not move.
@@ -249,7 +300,7 @@ function applyTrim(seq: Sequence, cmd: TrimObjectCommand, ctx: CommandContext): 
     };
   }
 
-  const bounds = ctx.assetBounds?.get(clip.assetId);
+  const bounds = clip.kind === "clip" ? ctx.assetBounds?.get(clip.assetId) : undefined;
   if (bounds !== undefined) {
     const sourceEnd = endTicks(next.sourceInTicks, next.sourceDurationTicks);
     if (next.sourceInTicks < ZERO_TICKS || sourceEnd > bounds) {
@@ -272,12 +323,12 @@ function applyTrim(seq: Sequence, cmd: TrimObjectCommand, ctx: CommandContext): 
 }
 
 function applyMove(seq: Sequence, cmd: MoveObjectCommand): CommandResult {
-  const clip = requireClip(seq, cmd.objectId);
+  const clip = requireObject(seq, cmd.objectId);
   assertUnlocked(seq, clip.trackId); // cannot move off a locked track
   assertUnlocked(seq, cmd.toTrackId); // cannot move onto a locked track
   assertNoCollision(seq, cmd.toTrackId, cmd.toStartTicks, clip.durationTicks, clip.id);
 
-  const next: SourceClip = { ...clip, trackId: cmd.toTrackId, startTicks: cmd.toStartTicks };
+  const next: TimelineObject = { ...clip, trackId: cmd.toTrackId, startTicks: cmd.toStartTicks };
   const inverse: MoveObjectCommand = {
     type: "MoveObject",
     meta: invertMeta(cmd.meta, "inv"),
@@ -289,7 +340,7 @@ function applyMove(seq: Sequence, cmd: MoveObjectCommand): CommandResult {
 }
 
 function applySplit(seq: Sequence, cmd: SplitObjectCommand): CommandResult {
-  const clip = requireClip(seq, cmd.objectId);
+  const clip = requireObject(seq, cmd.objectId);
   assertUnlocked(seq, clip.trackId);
   if (seq.objects.some((o) => o.id === cmd.newObjectId)) {
     throw new CommandError(`Object ${cmd.newObjectId} already exists`, "TIMELINE_OBJECT_EXISTS");
@@ -309,12 +360,12 @@ function applySplit(seq: Sequence, cmd: SplitObjectCommand): CommandResult {
   const rightSourceDuration = asTicks(clip.sourceDurationTicks - leftSourceDuration);
   const rightSourceIn = asTicks(clip.sourceInTicks + leftSourceDuration);
 
-  const left: SourceClip = {
+  const left: TimelineObject = {
     ...clip,
     durationTicks: leftDuration,
     sourceDurationTicks: leftSourceDuration,
   };
-  const right: SourceClip = {
+  const right: TimelineObject = {
     ...clip,
     id: cmd.newObjectId,
     startTicks: cmd.atTicks,
@@ -342,6 +393,114 @@ function applySplit(seq: Sequence, cmd: SplitObjectCommand): CommandResult {
         deltaTicks: rightDuration,
       },
     ],
+  };
+  return { sequence, inverse };
+}
+
+function applyShift(seq: Sequence, cmd: ShiftObjectsCommand): CommandResult {
+  const ids = new Set(cmd.objectIds);
+  const moving = seq.objects.filter((o) => ids.has(o.id));
+  if (moving.length !== ids.size) {
+    throw new CommandError(
+      "ShiftObjects references an unknown object",
+      "TIMELINE_OBJECT_NOT_FOUND",
+    );
+  }
+  for (const o of moving) {
+    assertUnlocked(seq, o.trackId);
+    const newStart = asTicks(o.startTicks + cmd.deltaTicks);
+    // Check the shifted position against objects that are NOT part of the moving set.
+    for (const other of seq.objects) {
+      if (ids.has(other.id) || other.trackId !== o.trackId) continue;
+      const end = endTicks(newStart, o.durationTicks);
+      if (
+        intervalsOverlap(
+          newStart,
+          end,
+          other.startTicks,
+          endTicks(other.startTicks, other.durationTicks),
+        )
+      ) {
+        throw new CommandError(
+          `Shifted object ${o.id} would overlap ${other.id}`,
+          "TIMELINE_COLLISION",
+        );
+      }
+    }
+  }
+  const sequence: Sequence = {
+    ...seq,
+    objects: seq.objects.map((o) =>
+      ids.has(o.id) ? { ...o, startTicks: asTicks(o.startTicks + cmd.deltaTicks) } : o,
+    ),
+  };
+  const inverse: ShiftObjectsCommand = {
+    type: "ShiftObjects",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectIds: cmd.objectIds,
+    deltaTicks: -cmd.deltaTicks,
+  };
+  return { sequence, inverse };
+}
+
+function applySetTrackFlag(seq: Sequence, cmd: SetTrackFlagCommand): CommandResult {
+  const track = requireTrack(seq, cmd.trackId);
+  const previous = track[cmd.flag];
+  const sequence: Sequence = {
+    ...seq,
+    tracks: seq.tracks.map((t) => (t.id === cmd.trackId ? { ...t, [cmd.flag]: cmd.value } : t)),
+  };
+  const inverse: SetTrackFlagCommand = {
+    type: "SetTrackFlag",
+    meta: invertMeta(cmd.meta, "inv"),
+    trackId: cmd.trackId,
+    flag: cmd.flag,
+    value: previous,
+  };
+  return { sequence, inverse };
+}
+
+function applyAddMarker(seq: Sequence, cmd: AddMarkerCommand): CommandResult {
+  if (seq.markers.some((m) => m.id === cmd.marker.id)) {
+    throw new CommandError(`Marker ${cmd.marker.id} already exists`, "TIMELINE_MARKER_EXISTS");
+  }
+  const sequence: Sequence = { ...seq, markers: [...seq.markers, cmd.marker] };
+  const inverse: RemoveMarkerCommand = {
+    type: "RemoveMarker",
+    meta: invertMeta(cmd.meta, "inv"),
+    markerId: cmd.marker.id,
+  };
+  return { sequence, inverse };
+}
+
+function applyRemoveMarker(seq: Sequence, cmd: RemoveMarkerCommand): CommandResult {
+  const marker = seq.markers.find((m) => m.id === cmd.markerId);
+  if (!marker) {
+    throw new CommandError(`Marker ${cmd.markerId} not found`, "TIMELINE_MARKER_NOT_FOUND");
+  }
+  const sequence: Sequence = { ...seq, markers: seq.markers.filter((m) => m.id !== cmd.markerId) };
+  const inverse: AddMarkerCommand = {
+    type: "AddMarker",
+    meta: invertMeta(cmd.meta, "inv"),
+    marker,
+  };
+  return { sequence, inverse };
+}
+
+function applyMoveMarker(seq: Sequence, cmd: MoveMarkerCommand): CommandResult {
+  const marker = seq.markers.find((m) => m.id === cmd.markerId);
+  if (!marker) {
+    throw new CommandError(`Marker ${cmd.markerId} not found`, "TIMELINE_MARKER_NOT_FOUND");
+  }
+  const sequence: Sequence = {
+    ...seq,
+    markers: seq.markers.map((m) => (m.id === cmd.markerId ? { ...m, atTicks: cmd.toTicks } : m)),
+  };
+  const inverse: MoveMarkerCommand = {
+    type: "MoveMarker",
+    meta: invertMeta(cmd.meta, "inv"),
+    markerId: cmd.markerId,
+    toTicks: marker.atTicks,
   };
   return { sequence, inverse };
 }
@@ -383,6 +542,16 @@ export function applyCommand(
       return applyMove(seq, cmd);
     case "SplitObject":
       return applySplit(seq, cmd);
+    case "ShiftObjects":
+      return applyShift(seq, cmd);
+    case "SetTrackFlag":
+      return applySetTrackFlag(seq, cmd);
+    case "AddMarker":
+      return applyAddMarker(seq, cmd);
+    case "RemoveMarker":
+      return applyRemoveMarker(seq, cmd);
+    case "MoveMarker":
+      return applyMoveMarker(seq, cmd);
     case "Batch":
       return applyBatch(seq, cmd, ctx);
   }

@@ -34,8 +34,7 @@ const trackSchema = z.object({
   rippleGroupId: z.string().optional(),
 });
 
-const sourceClipSchema = z.object({
-  kind: z.literal("clip"),
+const rangedFields = {
   id: z.string().min(1),
   trackId: z.string().min(1),
   startTicks: tickSchema,
@@ -44,11 +43,27 @@ const sourceClipSchema = z.object({
   name: z.string().optional(),
   linkGroupId: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
-  assetId: z.string().min(1),
   sourceInTicks: tickSchema,
   sourceDurationTicks: tickSchema.refine((n) => n > 0, "sourceDurationTicks must be > 0"),
   playbackRate: z.union([z.literal(0.25), z.literal(0.5), z.literal(1), z.literal(2)]),
+};
+
+const sourceClipSchema = z.object({
+  ...rangedFields,
+  kind: z.literal("clip"),
+  assetId: z.string().min(1),
 });
+
+const nestedSequenceObjectSchema = z.object({
+  ...rangedFields,
+  kind: z.literal("nested"),
+  sequenceId: z.string().min(1),
+});
+
+const timelineObjectSchema = z.discriminatedUnion("kind", [
+  sourceClipSchema,
+  nestedSequenceObjectSchema,
+]);
 
 const markerSchema = z.object({
   id: z.string().min(1),
@@ -62,7 +77,7 @@ export const sequenceSchema = z.object({
   name: z.string(),
   settings: sequenceSettingsSchema,
   tracks: z.array(trackSchema),
-  objects: z.array(sourceClipSchema),
+  objects: z.array(timelineObjectSchema),
   markers: z.array(markerSchema),
   basketballContextId: z.string().optional(),
   parentSequenceIds: z.array(z.string()),
