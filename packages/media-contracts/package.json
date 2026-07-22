@@ -1,0 +1,16 @@
+{
+  "name": "@sve/media-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral media DTOs: inspect, proxy, render plan, export job, and output validation. No FFmpeg/Media3 imports.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

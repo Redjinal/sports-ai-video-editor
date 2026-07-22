@@ -1,0 +1,17 @@
+{
+  "name": "@sve/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-package integration, media, and e2e tests.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/application-services": "workspace:*",
+    "@sve/media-contracts": "workspace:*",
+    "@sve/persistence": "workspace:*",
+    "@sve/project-domain": "workspace:*",
+    "@sve/timeline-domain": "workspace:*"
+  }
+}

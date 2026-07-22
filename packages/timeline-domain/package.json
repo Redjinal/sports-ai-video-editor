@@ -1,0 +1,16 @@
+{
+  "name": "@sve/timeline-domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral timeline: integer-tick time, sequence/track/object model, and reversible edit commands.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

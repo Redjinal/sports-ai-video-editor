@@ -1,0 +1,33 @@
+{
+  "name": "sports-ai-video-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first, timeline-first sports-aware video editor (Phase 1 internal prototype).",
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --parallel exec tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --dir tests/integration",
+    "test:e2e": "echo \"[test:e2e] no e2e harness yet (added with the Tauri shell in M1 Task 3)\" && exit 0",
+    "test:visual": "echo \"[test:visual] no visual harness yet (added in M2/M3)\" && exit 0",
+    "test:media": "vitest run --dir tests/media",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.19.1",
+    "vitest": "^2.1.8"
+  }
+}

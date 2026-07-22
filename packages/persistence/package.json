@@ -1,0 +1,16 @@
+{
+  "name": "@sve/persistence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Atomic project persistence: versioned JSON manifest writes with recovery snapshots and a journal.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/project-domain": "workspace:*"
+  }
+}
