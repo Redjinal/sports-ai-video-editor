@@ -18,11 +18,19 @@ Start every session by reading, in order:
 4. The authoritative document(s) for the task (see the task→docs table in `AGENTS.md` §3)
 5. Existing code and tests in the affected area
 
-## Current state: documentation only
+## Current state
 
-**No product code exists yet.** Milestone M0 (governance + full documentation baseline) is complete. The next approved milestone is **M1 — Technical Vertical Slice** (Windows Tauri shell → React UI → Rust FFmpeg bridge → inspect one MP4 → proxy → preview → trim → export → validate; plus a benchmark of Rust's orchestration value).
+**M0, M1, and M2 are complete and merged.** The pnpm monorepo, the platform-neutral domains,
+the Rust `desktop-media` and `desktop-storage` crates, the Tauri shell, and the React editor
+(Project Hub + editor shell) all exist and are tested. The next approved milestone is
+**M3 — Timeline kernel**. Always confirm the live status in
+[`docs/memory/active-state.md`](docs/memory/active-state.md) before starting.
 
-Do not assume packages, build tooling, or the commands below exist yet — they are the *planned* targets. Verify against the working tree before running anything. The AI provider is **unresolved** and must not be selected without explicit approval.
+The AI provider is still **unresolved** and must not be selected without explicit approval.
+
+Multi-agent work follows [`docs/engineering/agent-organization.md`](docs/engineering/agent-organization.md)
+(CEO → department heads → package-scoped specialists; product-acceptance QA separate from
+reliability QA; agents instantiated only when their milestone is active).
 
 ## Planned commands (do not yet exist)
 

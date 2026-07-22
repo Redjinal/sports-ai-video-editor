@@ -80,6 +80,7 @@ Each subject has one normative owner. Other documents may summarise or link to i
 | Accepted decisions | `docs/memory/decisions.md` |
 | Current work state | `docs/memory/active-state.md` |
 | Known defects, risks, and unresolved choices | `docs/memory/known-issues.md` |
+| Agent hierarchy, decision rights, activation, task naming | `docs/engineering/agent-organization.md` |
 
 When documents conflict, the authoritative file wins. Record the conflict in `known-issues.md` and correct the non-authoritative file in the same task when practical.
 
@@ -248,6 +249,15 @@ Do not:
 - Date all material updates using `YYYY-MM-DD`.
 - Keep `active-state.md` concise and operational.
 - Keep `known-issues.md` limited to real risks, defects, and unresolved decisions.
+
+## 9a. Agent organization
+
+Multi-agent work uses a CEO → two department heads → package-scoped specialists structure,
+with product-acceptance QA separated from technical/reliability QA. Governance (reporting
+templates, decision rights, activation model, conflict resolution, task naming) and the live
+roster are authoritative in [`docs/engineering/agent-organization.md`](docs/engineering/agent-organization.md).
+Agents are instantiated only when their milestone is active, are scoped to non-overlapping
+packages, and never commit/push/release without direct user instruction.
 
 ## 10. Current implementation state
 
