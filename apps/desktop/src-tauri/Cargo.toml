@@ -13,6 +13,7 @@ tauri = { version = "2", features = ["protocol-asset"] }
 serde.workspace = true
 serde_json.workspace = true
 desktop-media = { path = "../../../native/desktop-media" }
+desktop-storage = { path = "../../../native/desktop-storage" }
 
 [lints.clippy]
 unwrap_used = "deny"
