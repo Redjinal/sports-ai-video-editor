@@ -70,6 +70,26 @@
 | DEC-ARCH-008 | 2026-07-22 | Accepted | Portable project truth uses versioned JSON; SQLite is a rebuildable local index. | Balances portability, inspectability, and long-project performance. |
 | DEC-ARCH-009 | 2026-07-22 | Accepted | Retain Rust for desktop media orchestration, confirming `DEC-ARCH-003` — but on process-boundary grounds, **not** performance. | See the M1 spike outcome below. The measured performance case for Rust did not materialise; the architectural case did. |
 
+| DEC-ARCH-010 | 2026-07-22 | Accepted | Authoritative project file I/O lives in `native/desktop-storage` (Rust). `packages/persistence` keeps the repository interface, manifest schema, and pure serialization only. | The webview has no filesystem access, so a `node:fs` repository can never execute in the shipping app. Tests must exercise the implementation that actually ships. |
+
+### DEC-ARCH-010 — Project file I/O belongs to the native layer
+
+`packages/persistence` originally implemented `FileProjectRepository` with `node:fs`. That
+runs under Vitest but **cannot run in the Tauri webview**, so it validated an implementation
+the app could never execute — the same class of gap that let a truncated export pass
+validation in M1.
+
+From M2, `native/desktop-storage` is the authoritative implementation of create/open/save/
+duplicate/delete, atomic replace, recovery rotation, and journal checkpoints, and it is
+tested against real files. TypeScript retains the domain schema (zod), the repository
+interface, and pure serialization; the Rust layer additionally enforces storage invariants
+(absolute paths, no `..`, refusing to delete a folder that is not a project).
+
+**Consequence not yet resolved:** the Node `FileProjectRepository` still exists and is still
+exercised by `tests/integration`. Two implementations of the same contract can drift. It must
+either be reduced to an explicitly test/tooling-only adapter or removed, and that is tracked
+as ISSUE-021.
+
 ### DEC-ARCH-009 — M1 spike outcome (closes ISSUE-002)
 
 The roadmap required benchmarking Rust orchestration **against a simpler alternative**. A

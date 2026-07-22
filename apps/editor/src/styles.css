@@ -180,3 +180,232 @@ video {
   border: 1px solid var(--line);
   max-width: 100%;
 }
+
+/* ---- M2: Project Hub, editor shell, resizable panels ------------------- */
+/* Minimum supported logical viewport is 1280x800 (DEC-PLAT-003). */
+
+.hub {
+  max-width: 1000px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.field input,
+.field select {
+  min-width: 200px;
+}
+.project-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.project-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #0d1117;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.project-list li.is-missing {
+  border-color: var(--bad);
+}
+.project-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  flex: 1;
+}
+.project-main .muted {
+  font-size: 12px;
+}
+.badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.badge.good {
+  color: var(--good);
+}
+.badge.warn {
+  color: var(--warn);
+}
+.badge.bad {
+  color: var(--bad);
+}
+button.danger {
+  background: #8b2c25;
+}
+button.danger:hover {
+  background: #a33228;
+}
+
+.confirm {
+  position: fixed;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px 24px;
+  max-width: 560px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  z-index: 20;
+}
+.confirm h2 {
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 16px;
+}
+
+/* Editor shell */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 1280px;
+}
+.shell-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.shell-bar .spacer {
+  flex: 1;
+}
+.save-state {
+  font-size: 12px;
+  color: var(--muted);
+}
+.save-state.is-unsaved {
+  color: var(--warn);
+}
+.save-state.is-error {
+  color: var(--bad);
+}
+.save-state.is-saved {
+  color: var(--good);
+}
+
+.panel-group {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.panel-group.is-vertical {
+  flex-direction: column;
+}
+.panel-slot {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.panel-group.is-horizontal > .panel-slot {
+  flex-direction: row;
+}
+.panel-group.is-vertical > .panel-slot {
+  flex-direction: column;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.panel-head h2 {
+  margin: 0;
+  font-size: 11px;
+}
+.panel-toggle {
+  background: transparent;
+  color: var(--muted);
+  padding: 2px 8px;
+  font-weight: 500;
+}
+.panel-toggle:hover {
+  color: var(--text);
+}
+.panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  min-height: 0;
+}
+.panel.is-collapsed {
+  flex: 0 0 auto;
+}
+
+.panel-separator {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: transparent;
+  align-self: stretch;
+}
+.panel-group.is-vertical .panel-separator {
+  flex-basis: 6px;
+  cursor: row-resize;
+}
+.panel-separator:hover,
+.panel-separator:focus-visible {
+  background: var(--accent);
+}
+.panel-separator:focus-visible {
+  outline: 2px solid #58a6ff;
+  outline-offset: -2px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stack h3 {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 6px 0 0;
+  text-transform: uppercase;
+}
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.link-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.wrap {
+  overflow-wrap: anywhere;
+}

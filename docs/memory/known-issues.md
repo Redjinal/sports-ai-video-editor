@@ -181,6 +181,19 @@
 
 ## 3. Resolved items
 
+### ISSUE-021 — Two implementations of the project repository — **RESOLVED 2026-07-22**
+
+- **Severity when open:** Medium
+- **Problem:** `packages/persistence/FileProjectRepository` (`node:fs`) and
+  `native/desktop-storage` (Rust) both implemented project save/open. Only the Rust one ships,
+  yet the Node one was what `tests/integration` exercised — so a green integration test could
+  have described behaviour the app does not have.
+- **Resolution:** The `node:fs` repository and its tests were removed. `@sve/persistence` now
+  holds only the repository interface and pure serialization; `tests/integration` exercises the
+  platform-neutral path (edit → stable serialize → schema re-validate → undo), and all file I/O
+  is covered by `native/desktop-storage` tests against real files.
+- **Reference:** `DEC-ARCH-010`; `native/desktop-storage/tests/{project_lifecycle,exit_criteria}.rs`.
+
 ### ISSUE-002 — Rust desktop orchestration is conditional — **RESOLVED 2026-07-22**
 
 - **Severity when open:** High

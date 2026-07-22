@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["native/desktop-media", "apps/desktop/src-tauri"]
+members = ["native/desktop-media", "native/desktop-storage", "apps/desktop/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"

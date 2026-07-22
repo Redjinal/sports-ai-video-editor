@@ -1,0 +1,17 @@
+[package]
+name = "desktop-storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Windows desktop storage adapter: safe paths, atomic project writes, recovery snapshots, and the rebuildable SQLite index."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# `bundled` compiles SQLite from source so the app never depends on a system library.
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

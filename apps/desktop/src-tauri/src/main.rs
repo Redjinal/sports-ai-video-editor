@@ -3,6 +3,8 @@
 // versioned requests across this boundary and receives structured results and events.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod storage_commands;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -239,6 +241,8 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             app.manage(Jobs::default());
+            let index = storage_commands::build_index(app.handle());
+            app.manage(storage_commands::IndexState(Mutex::new(index)));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -246,7 +250,18 @@ fn main() {
             inspect_media,
             generate_proxy,
             export_sequence,
-            cancel_job
+            cancel_job,
+            storage_commands::default_projects_dir,
+            storage_commands::project_create,
+            storage_commands::project_open,
+            storage_commands::project_save,
+            storage_commands::project_duplicate,
+            storage_commands::project_delete,
+            storage_commands::project_recovery_snapshots,
+            storage_commands::project_recover_as_copy,
+            storage_commands::project_detect_links,
+            storage_commands::project_relink,
+            storage_commands::recent_projects
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
