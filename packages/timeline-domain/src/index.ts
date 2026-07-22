@@ -3,4 +3,5 @@
 export * from "./ticks";
 export * from "./model";
 export * from "./commands";
+export * from "./history";
 export * from "./serialization";
