@@ -1,3 +1,4 @@
 {
-  "fixtures/media/sync8s_1080p30_h264_aac.mp4": "4b1335843ebeb4f7fac9ef325de2449e4ce4b30af1f24e18d7820fdc52fceba6"
+  "fixtures/media/sync8s_1080p30_h264_aac.mp4": "4b1335843ebeb4f7fac9ef325de2449e4ce4b30af1f24e18d7820fdc52fceba6",
+  "fixtures/media/generated/vslice_600s_1080p30_h264_aac.mp4": "8ab6156226058a2238778542a52b67edfd9ffca335fe9888d5621c48ed237441"
 }

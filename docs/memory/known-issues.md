@@ -24,12 +24,20 @@
 
 ### ISSUE-002 — Rust desktop orchestration is conditional
 
-- **Severity:** High
+- **Severity:** Medium (was High)
 - **Area:** Architecture
 - **Impact:** Native package structure and maintenance depend on the M1 result.
-- **Current handling:** Rust/Tauri is selected for the vertical slice.
-- **Required evidence:** Process control, progress, cancellation, IPC, packaging, crash isolation, and maintenance comparison.
-- **Resolution condition:** Record benchmark outcome and confirm or supersede `DEC-ARCH-003`.
+- **Current handling:** Rust/Tauri implemented and exercised through the M1 vertical slice.
+- **Evidence recorded 2026-07-22** (Windows 11, x86_64, 12 logical CPUs, debug build, FFmpeg 8.1.2 — not certified reference hardware, see ISSUE-004):
+  - Metadata throughput: ~95 ms per inspect (~10.5/s); dominated by FFprobe process start, not by Rust.
+  - Cancellation latency: ~220 ms from flag to unwound job, with no partial file left behind.
+  - IPC payload: 631-byte inspect result, ~59 µs serialise+parse round trip.
+  - Crash isolation: a failing/missing input returns a structured error; the host process survives.
+  - Process control and structured progress via `-progress pipe:1` work as designed.
+- **Still outstanding:** the roadmap asks for a comparison **against simpler alternatives**
+  (e.g. orchestrating FFmpeg from the JS side). That comparative benchmark has **not** been
+  run, so `DEC-ARCH-003` remains *accepted, conditional* rather than confirmed.
+- **Resolution condition:** Run the comparative benchmark, then confirm or supersede `DEC-ARCH-003`.
 
 ### ISSUE-003 — DeX media capability is unvalidated
 
@@ -81,11 +89,15 @@
 
 ### ISSUE-009 — Large legal media fixtures are not prepared
 
-- **Severity:** High
+- **Severity:** Medium (was High)
 - **Area:** Testing
 - **Impact:** M1 and long-form certification cannot run reproducibly.
-- **Current handling:** Require synthetic or explicitly licensed fixtures.
-- **Resolution condition:** Generate/checksum F1–F5 fixtures and document storage.
+- **Current handling:** `tools/fixtures/generate-fixtures.mjs` produces synthetic, legally
+  clean H.264/AAC fixtures from FFmpeg's own sources. An 8 s F1/F2 fixture is committed and
+  checksummed; the 10-minute F3 fixture is generated on demand and git-ignored. Both are
+  documented in `fixtures/media/README.md`.
+- **Resolution condition:** Extend the generator to F4 (30 min, multicamera) and F5
+  (120 min, 2K, four cameras), and document long-term storage for anything not regenerable.
 
 ### ISSUE-010 — Exact proxy encoding parameters are not benchmarked
 
@@ -158,6 +170,31 @@
 - **Impact:** Portable projects may reference fonts that cannot be embedded.
 - **Current handling:** Report external fonts and keep licensing responsibility with user.
 - **Resolution condition:** Test common font scenarios and refine package warnings.
+
+### ISSUE-019 — Desktop asset-protocol scope is unrestricted
+
+- **Severity:** Medium
+- **Area:** Security/desktop
+- **Impact:** `apps/desktop/src-tauri/tauri.conf.json` enables the Tauri asset protocol with
+  scope `["**"]` so the preview player can read proxies from arbitrary user paths. That is
+  broader than least privilege and would let any page loaded in the webview read any file
+  the user can read.
+- **Current handling:** Acceptable for a local single-user M1 prototype with a
+  locked-down CSP and no remote content loaded.
+- **Resolution condition:** Narrow the scope to the project/proxy/managed directories before
+  any external release or before the webview ever loads third-party content.
+
+### ISSUE-020 — FFmpeg is discovered, not bundled
+
+- **Severity:** Medium
+- **Area:** Media/packaging
+- **Impact:** The desktop adapter resolves `ffmpeg`/`ffprobe` from PATH (overridable via
+  `SVE_FFMPEG_PATH`/`SVE_FFPROBE_PATH`). A packaged build cannot assume the user has FFmpeg,
+  and an unpinned build changes encoder behaviour underneath the certification matrix.
+- **Current handling:** Lookup is centralised in `native/desktop-media/src/ffbin.rs`, and the
+  app reports availability before any job starts.
+- **Resolution condition:** Pin and bundle a known FFmpeg build with the installer, record its
+  version in diagnostics, and re-run the media certification matrix against it.
 
 ## 3. Resolved items
 
