@@ -72,7 +72,37 @@ export interface NestedSequenceObject extends RangedObject {
   sequenceId: string;
 }
 
-export type TimelineObject = SourceClip | NestedSequenceObject;
+/**
+ * How a transition blends across its span (DEC-EDIT-007). A discriminated union on `type` so
+ * each variant carries only the parameters it needs. Time is authoritative on the enclosing
+ * TransitionObject (start/duration in ticks); these fields are purely the blend recipe.
+ */
+export type TransitionSpec =
+  | { type: "crossDissolve" }
+  /** Dip to a solid colour (e.g. dip-to-black) at the midpoint, as #rrggbb. */
+  | { type: "dip"; color: string }
+  /** Fade from ("in") or to ("out") a solid colour at a clip head/tail, as #rrggbb. */
+  | { type: "fade"; color: string; direction: "in" | "out" }
+  /** Linear wipe at `angleDegrees`, edge softened by `softnessPx` pixels. */
+  | { type: "wipe"; angleDegrees: number; softnessPx: number };
+
+/**
+ * A transition is its own timeline object spanning the region it affects (DEC-EDIT-007):
+ * it is not a property hung off a clip. It occupies [start, start+duration) on a track and,
+ * like the other ranged objects, moves/trims through the same commands. `fromId`/`toId`
+ * optionally link the objects it bridges — a cut transition references both the outgoing and
+ * incoming clips; a fade references only one.
+ */
+export interface TransitionObject extends RangedObject {
+  kind: "transition";
+  transition: TransitionSpec;
+  /** Outgoing object this transition blends from, if any. */
+  fromId?: string;
+  /** Incoming object this transition blends to, if any. */
+  toId?: string;
+}
+
+export type TimelineObject = SourceClip | NestedSequenceObject | TransitionObject;
 
 export interface Marker {
   id: string;

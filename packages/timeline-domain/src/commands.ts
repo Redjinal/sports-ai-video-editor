@@ -2,7 +2,7 @@
 // Every mutation is an atomic command with a deterministic inverse. apply is a pure
 // function of (sequence, command): it never reads UI selection and never mutates input.
 // A failing command throws and does not enter history.
-import type { Marker, Sequence, TimelineObject } from "./model";
+import type { Marker, Sequence, TimelineObject, TransitionObject, TransitionSpec } from "./model";
 import { type Ticks, asTicks, endTicks, ZERO_TICKS } from "./ticks";
 
 export interface CommandMeta {
@@ -24,6 +24,18 @@ export interface RemoveObjectCommand {
   type: "RemoveObject";
   meta: CommandMeta;
   objectId: string;
+}
+
+/**
+ * Replace the blend recipe of a transition object in place (DEC-EDIT-007). Only the
+ * `transition` field changes; span/track are edited through the ranged commands. The inverse
+ * restores the prior spec exactly, so undo is deterministic.
+ */
+export interface SetTransitionCommand {
+  type: "SetTransition";
+  meta: CommandMeta;
+  objectId: string;
+  transition: TransitionSpec;
 }
 
 export type TrimEdge = "start" | "end";
@@ -113,6 +125,7 @@ export interface MoveMarkerCommand {
 export type TimelineCommand =
   | AddObjectCommand
   | RemoveObjectCommand
+  | SetTransitionCommand
   | TrimObjectCommand
   | MoveObjectCommand
   | SplitObjectCommand
@@ -267,6 +280,25 @@ function applyRemove(seq: Sequence, cmd: RemoveObjectCommand): CommandResult {
     object,
   };
   return { sequence, inverse };
+}
+
+function applySetTransition(seq: Sequence, cmd: SetTransitionCommand): CommandResult {
+  const object = requireObject(seq, cmd.objectId);
+  if (object.kind !== "transition") {
+    throw new CommandError(
+      `Object ${cmd.objectId} is not a transition`,
+      "TIMELINE_OBJECT_NOT_FOUND",
+    );
+  }
+  const previous = object.transition;
+  const next: TimelineObject = { ...object, transition: cmd.transition };
+  const inverse: SetTransitionCommand = {
+    type: "SetTransition",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    transition: previous,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
 }
 
 function applyTrim(seq: Sequence, cmd: TrimObjectCommand, ctx: CommandContext): CommandResult {
@@ -536,6 +568,8 @@ export function applyCommand(
       return applyAdd(seq, cmd, ctx);
     case "RemoveObject":
       return applyRemove(seq, cmd);
+    case "SetTransition":
+      return applySetTransition(seq, cmd);
     case "TrimObject":
       return applyTrim(seq, cmd, ctx);
     case "MoveObject":
@@ -555,4 +589,49 @@ export function applyCommand(
     case "Batch":
       return applyBatch(seq, cmd, ctx);
   }
+}
+
+export interface BuildCrossDissolveOptions {
+  /** Id for the new transition object. */
+  id: string;
+  /** Outgoing clip: the transition centres on where this object ends. */
+  fromId: string;
+  /** Incoming clip that begins at the same boundary. */
+  toId: string;
+  /** Total span of the transition; it straddles the cut symmetrically. */
+  durationTicks: Ticks;
+  meta: CommandMeta;
+}
+
+/**
+ * Build the command that drops a crossDissolve transition object over the cut between two
+ * adjacent clips (DEC-EDIT-007). The transition is centred on the boundary — it starts
+ * duration/2 before the cut and spans it — and lands on the outgoing clip's track. Returns an
+ * AddObjectCommand (transitions are ordinary TimelineObjects), so undo is the generic
+ * RemoveObject inverse.
+ */
+export function buildCrossDissolve(
+  seq: Sequence,
+  opts: BuildCrossDissolveOptions,
+): AddObjectCommand {
+  const from = requireObject(seq, opts.fromId);
+  requireObject(seq, opts.toId);
+  const boundary = endTicks(from.startTicks, from.durationTicks);
+  const half = asTicks(Math.floor(opts.durationTicks / 2));
+  const start = asTicks(boundary - half);
+  const object: TransitionObject = {
+    kind: "transition",
+    id: opts.id,
+    trackId: from.trackId,
+    startTicks: start,
+    durationTicks: opts.durationTicks,
+    enabled: true,
+    sourceInTicks: ZERO_TICKS,
+    sourceDurationTicks: opts.durationTicks,
+    playbackRate: 1,
+    transition: { type: "crossDissolve" },
+    fromId: opts.fromId,
+    toId: opts.toId,
+  };
+  return { type: "AddObject", meta: opts.meta, object };
 }
