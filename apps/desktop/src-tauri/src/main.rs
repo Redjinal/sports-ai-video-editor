@@ -237,6 +237,121 @@ fn cancel_job(jobs: State<'_, Jobs>, job_id: String) {
     jobs.cancel(&job_id);
 }
 
+const TIMESCALE: f64 = 27_000_000.0;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThumbnailArgs {
+    job_id: String,
+    source_path: String,
+    output_path: String,
+    count: u32,
+    tile_width: u32,
+    duration_ticks: i64,
+}
+
+#[tauri::command]
+async fn generate_thumbnails(
+    jobs: State<'_, Jobs>,
+    args: ThumbnailArgs,
+) -> Result<desktop_media::thumbnail::ThumbnailStrip, MediaError> {
+    let cancel = jobs.register(&args.job_id);
+    let job_id = args.job_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        desktop_media::thumbnail::generate_strip(
+            &job_id,
+            std::path::Path::new(&args.source_path),
+            std::path::Path::new(&args.output_path),
+            args.count,
+            args.tile_width,
+            args.duration_ticks as f64 / TIMESCALE,
+            &cancel,
+        )
+    })
+    .await
+    .map_err(|e| {
+        MediaError::new(
+            MediaErrorCode::MediaProxyFailed,
+            "Thumbnail job did not complete.",
+        )
+        .with_cause(e.to_string())
+    })?;
+    jobs.finish(&args.job_id);
+    result
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WaveformArgs {
+    job_id: String,
+    source_path: String,
+    buckets: u32,
+    duration_ticks: i64,
+}
+
+#[tauri::command]
+async fn generate_waveform(
+    jobs: State<'_, Jobs>,
+    args: WaveformArgs,
+) -> Result<desktop_media::waveform::Waveform, MediaError> {
+    let cancel = jobs.register(&args.job_id);
+    let job_id = args.job_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        desktop_media::waveform::generate(
+            &job_id,
+            std::path::Path::new(&args.source_path),
+            args.buckets,
+            args.duration_ticks as f64 / TIMESCALE,
+            &cancel,
+        )
+    })
+    .await
+    .map_err(|e| {
+        MediaError::new(
+            MediaErrorCode::MediaUnreadable,
+            "Waveform job did not complete.",
+        )
+        .with_cause(e.to_string())
+    })?;
+    jobs.finish(&args.job_id);
+    result
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ManagedArgs {
+    job_id: String,
+    source_path: String,
+    output_path: String,
+}
+
+#[tauri::command]
+async fn convert_managed(
+    jobs: State<'_, Jobs>,
+    args: ManagedArgs,
+) -> Result<desktop_media::managed::ManagedConversion, MediaError> {
+    let cancel = jobs.register(&args.job_id);
+    let job_id = args.job_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        desktop_media::managed::convert(
+            &job_id,
+            std::path::Path::new(&args.source_path),
+            std::path::Path::new(&args.output_path),
+            &cancel,
+        )
+    })
+    .await
+    .map_err(|e| {
+        MediaError::new(
+            MediaErrorCode::MediaProxyFailed,
+            "Managed conversion did not complete.",
+        )
+        .with_cause(e.to_string())
+    })?;
+    jobs.finish(&args.job_id);
+    result
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -251,6 +366,9 @@ fn main() {
             generate_proxy,
             export_sequence,
             cancel_job,
+            generate_thumbnails,
+            generate_waveform,
+            convert_managed,
             storage_commands::default_projects_dir,
             storage_commands::project_create,
             storage_commands::project_open,
@@ -261,7 +379,10 @@ fn main() {
             storage_commands::project_recover_as_copy,
             storage_commands::project_detect_links,
             storage_commands::project_relink,
-            storage_commands::recent_projects
+            storage_commands::recent_projects,
+            storage_commands::project_consolidate,
+            storage_commands::project_clean_cache,
+            storage_commands::project_package
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
