@@ -1,0 +1,17 @@
+{
+  "name": "@sve/caption-domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Transcript, transcript-driven selection, and captions (SRT/VTT, styling, provider-neutral translation proposals).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/timeline-domain": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}
