@@ -9,6 +9,7 @@ description = "Windows desktop storage adapter: safe paths, atomic project write
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+sha2.workspace = true
 # `bundled` compiles SQLite from source so the app never depends on a system library.
 rusqlite = { version = "0.32", features = ["bundled"] }
 

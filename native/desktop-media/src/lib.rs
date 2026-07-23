@@ -8,6 +8,7 @@ pub mod encode;
 pub mod error;
 pub mod ffbin;
 pub mod inspect;
+pub mod managed;
 pub mod plan;
 pub mod thumbnail;
 pub mod validate;
