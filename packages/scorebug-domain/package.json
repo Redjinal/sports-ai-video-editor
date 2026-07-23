@@ -1,0 +1,17 @@
+{
+  "name": "@sve/scorebug-domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral broadcast scorebug, sponsor, player lower-third, and non-destructive replay domain (M9).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/timeline-domain": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}

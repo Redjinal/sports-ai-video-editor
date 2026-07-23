@@ -124,6 +124,15 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
 
+  packages/scorebug-domain:
+    dependencies:
+      '@sve/timeline-domain':
+        specifier: workspace:*
+        version: link:../timeline-domain
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
   packages/timeline-domain:
     dependencies:
       zod:
