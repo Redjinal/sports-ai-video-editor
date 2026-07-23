@@ -1,0 +1,17 @@
+{
+  "name": "@sve/connector-domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral remote connector domain: remote source references, URL parsing, connection state machine, download/localisation jobs, and provider-neutral connector interfaces.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/timeline-domain": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}
