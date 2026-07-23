@@ -22,7 +22,7 @@ snapping, linked A/V, track lock/mute/solo, undo/redo history, markers, and nest
 The React editor timeline (`apps/editor/src/timeline`) is wired to that kernel — ruler/scrub,
 tracks with lock/mute/hide, clips (drag to move/trim), markers, playhead, and split/delete/
 ripple/undo/redo/zoom via toolbar + keyboard — and edits the manifest's active sequence with
-autosave. **117 tests total.** Ripple trim of the in-point is deferred by decision. Not yet
+autosave. **107 tests total** (`pnpm check`, 18 files). Ripple trim of the in-point is deferred by decision. Not yet
 done: a human GUI click-through (WebView2 automation resists it from here); timeline is covered
 by component tests.
 
