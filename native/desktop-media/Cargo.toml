@@ -11,6 +11,10 @@ serde_json.workspace = true
 thiserror.workspace = true
 sha2.workspace = true
 
+# Cross-crate M4 exit-criteria test drives the storage layer too.
+[dev-dependencies]
+desktop-storage = { path = "../desktop-storage" }
+
 [lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"
