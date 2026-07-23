@@ -126,11 +126,35 @@ const graphicObjectSchema = z.object({
   graphic: graphicSpecSchema,
 });
 
+const transitionSpecSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("crossDissolve") }),
+  z.object({ type: z.literal("dip"), color: z.string() }),
+  z.object({
+    type: z.literal("fade"),
+    color: z.string(),
+    direction: z.enum(["in", "out"]),
+  }),
+  z.object({
+    type: z.literal("wipe"),
+    angleDegrees: z.number(),
+    softnessPx: z.number().nonnegative(),
+  }),
+]);
+
+const transitionObjectSchema = z.object({
+  ...rangedFields,
+  kind: z.literal("transition"),
+  transition: transitionSpecSchema,
+  fromId: z.string().optional(),
+  toId: z.string().optional(),
+});
+
 const timelineObjectSchema = z.discriminatedUnion("kind", [
   sourceClipSchema,
   nestedSequenceObjectSchema,
   textObjectSchema,
   graphicObjectSchema,
+  transitionObjectSchema,
 ]);
 
 const markerSchema = z.object({
