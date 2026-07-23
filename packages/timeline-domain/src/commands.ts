@@ -2,7 +2,7 @@
 // Every mutation is an atomic command with a deterministic inverse. apply is a pure
 // function of (sequence, command): it never reads UI selection and never mutates input.
 // A failing command throws and does not enter history.
-import type { Marker, Sequence, TimelineObject } from "./model";
+import type { GraphicSpec, Marker, Sequence, TextStyle, TimelineObject } from "./model";
 import type { Transform } from "./transform";
 import { type Ticks, asTicks, endTicks, ZERO_TICKS } from "./ticks";
 
@@ -122,6 +122,23 @@ export interface SetTransformCommand {
   transform: Transform | undefined;
 }
 
+/** Edit a text object's content and style (M5). Reversible. */
+export interface SetTextCommand {
+  type: "SetText";
+  meta: CommandMeta;
+  objectId: string;
+  text: string;
+  style: TextStyle;
+}
+
+/** Edit a graphic object's specification (M5). Reversible. */
+export interface SetGraphicCommand {
+  type: "SetGraphic";
+  meta: CommandMeta;
+  objectId: string;
+  graphic: GraphicSpec;
+}
+
 export type TimelineCommand =
   | AddObjectCommand
   | RemoveObjectCommand
@@ -134,6 +151,8 @@ export type TimelineCommand =
   | RemoveMarkerCommand
   | MoveMarkerCommand
   | SetTransformCommand
+  | SetTextCommand
+  | SetGraphicCommand
   | BatchCommand;
 
 export interface CommandContext {
@@ -540,6 +559,37 @@ function applySetTransform(seq: Sequence, cmd: SetTransformCommand): CommandResu
   return { sequence: replaceObject(seq, next), inverse };
 }
 
+function applySetText(seq: Sequence, cmd: SetTextCommand): CommandResult {
+  const obj = requireObject(seq, cmd.objectId);
+  if (obj.kind !== "text") {
+    throw new CommandError(`Object ${cmd.objectId} is not text`, "TIMELINE_OBJECT_NOT_FOUND");
+  }
+  const next = { ...obj, text: cmd.text, style: cmd.style };
+  const inverse: SetTextCommand = {
+    type: "SetText",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    text: obj.text,
+    style: obj.style,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
+}
+
+function applySetGraphic(seq: Sequence, cmd: SetGraphicCommand): CommandResult {
+  const obj = requireObject(seq, cmd.objectId);
+  if (obj.kind !== "graphic") {
+    throw new CommandError(`Object ${cmd.objectId} is not a graphic`, "TIMELINE_OBJECT_NOT_FOUND");
+  }
+  const next = { ...obj, graphic: cmd.graphic };
+  const inverse: SetGraphicCommand = {
+    type: "SetGraphic",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    graphic: obj.graphic,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
+}
+
 function applyBatch(seq: Sequence, cmd: BatchCommand, ctx: CommandContext): CommandResult {
   // Thread the sequence immutably; if any sub-command throws, nothing is committed.
   let working = seq;
@@ -589,6 +639,10 @@ export function applyCommand(
       return applyMoveMarker(seq, cmd);
     case "SetTransform":
       return applySetTransform(seq, cmd);
+    case "SetText":
+      return applySetText(seq, cmd);
+    case "SetGraphic":
+      return applySetGraphic(seq, cmd);
     case "Batch":
       return applyBatch(seq, cmd, ctx);
   }

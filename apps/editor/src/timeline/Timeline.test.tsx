@@ -6,6 +6,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { asTicks, TIMESCALE, type Sequence, type SourceClip } from "@sve/timeline-domain";
 import { Timeline } from "./Timeline";
+import { useTimeline } from "./useTimeline";
 
 afterEach(cleanup);
 const S = TIMESCALE;
@@ -60,10 +61,25 @@ function seqOf(objects: SourceClip[], locked = false): Sequence {
   };
 }
 
+// Renders the timeline against a real editing session, exactly as the shell wires it. The
+// session owns the history; edits surface here through its onChange/onError.
+function Harness({
+  seq,
+  changes,
+  onError,
+}: {
+  seq: Sequence;
+  changes: Sequence[];
+  onError: (m: string) => void;
+}) {
+  const tl = useTimeline(seq, { onChange: (s) => changes.push(s), onError });
+  return <Timeline tl={tl} onError={onError} />;
+}
+
 function setup(seq: Sequence) {
   const changes: Sequence[] = [];
   const onError = vi.fn();
-  render(<Timeline sequence={seq} onChange={(s) => changes.push(s)} onError={onError} />);
+  render(<Harness seq={seq} changes={changes} onError={onError} />);
   const tl = screen.getByLabelText("Timeline");
   const latest = () => changes[changes.length - 1] ?? seq;
   const selectClip = (id: string) =>

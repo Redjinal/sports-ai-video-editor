@@ -59,7 +59,7 @@ describe("Editor shell", () => {
     render(<EditorShell dir={PROJECT_DIR} manifest={manifest} onClose={vi.fn()} />);
     expect(await screen.findByRole("region", { name: "Media" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Timeline" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Recovery" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Inspector" })).toBeTruthy();
   });
 
   it("starts in a saved state and shows the project name", async () => {
@@ -105,9 +105,10 @@ describe("Editor shell", () => {
   });
 
   it("makes recovery explicitly non-destructive in the copy it offers", async () => {
+    // With nothing selected the Inspector surfaces the recovery snapshots.
     render(<EditorShell dir={PROJECT_DIR} manifest={manifest} onClose={vi.fn()} />);
-    const recovery = await screen.findByRole("region", { name: "Recovery" });
-    expect(recovery.textContent).toMatch(/opens a copy/i);
+    const inspector = await screen.findByRole("region", { name: "Inspector" });
+    expect(inspector.textContent).toMatch(/opens a copy/i);
     expect(screen.getByRole("button", { name: "Recover a copy" })).toBeTruthy();
   });
 });

@@ -1,7 +1,7 @@
 # Active State
 
 > **Status:** Living operational memory  
-> **Last updated:** 2026-07-22
+> **Last updated:** 2026-07-22 (M5 inspector checkpoint)
 
 ## 1. Current phase
 
@@ -14,6 +14,29 @@
 **M2 — Project System and Editor Shell: Complete** (merged to `main`, PR #2)
 **M3 — Timeline kernel: Complete** (merged to `main`, PRs #4 + #5) — domain kernel **and** the React editor timeline UI
 **M4 — Media Ingest & Asset Management: Implemented** (branch `feature/m4-media-ingest`, awaiting review)
+**M5 — Graphics, Titles & Keyframes: In progress** (branch `feature/m5-canvas-graphics`, awaiting review)
+
+### M5 progress
+
+Domain (committed): keyframeable `Transform` with linear/hold/ease interpolation and pure
+per-tick evaluation (`transform.ts`); `TextObject` + `GraphicObject` (shape/image/logo/progress/
+waveform/lowerThird) added to the `TimelineObject` union; reversible `SetTransform` / `SetText`
+/ `SetGraphic` commands; full serialize/reopen round-trip. Exit-criteria (state half, Gate B):
+a branded title + lower-third + overlay is built non-destructively with keyframed fade/slide,
+survives save/reopen still animating, and undoes back to empty
+(`m5-exit-criteria.test.ts`).
+
+Interface (this checkpoint, Gate A): a **property inspector** (`apps/editor/src/inspector/`)
+shares one editing session with the timeline — `useTimeline` is lifted into `EditorShell` and
+passed to both `Timeline` and `Inspector`, so a clip move and a property change land in the same
+undo history. The inspector edits transform channels (with a keyframe-at-playhead toggle per
+channel), text content/size/colour, and lower-third/shape fields, each through the reversible
+domain commands; with nothing selected it surfaces the recovery snapshots. **136 tests total**
+(format + lint + typecheck + vitest all green; 3 media tests `#[ignore]`/skipped pending F-tier
+fixtures). Still to do in M5: viewer direct-manipulation handles, transition objects
+(DEC-EDIT-007), user template saving, and text/font import. As with M3, no human GUI
+click-through was performed (WebView2 automation resists it here); the UI is covered by
+component tests.
 
 ### M4 exit criteria — MET
 

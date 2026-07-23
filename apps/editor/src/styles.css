@@ -730,3 +730,46 @@ button.danger:hover {
   color: var(--text);
   font-family: ui-monospace, Consolas, monospace;
 }
+
+/* Property inspector (M5). Compact two-up fields with a keyframe toggle per animatable channel. */
+.stack[aria-label="Inspector"] .field input {
+  min-width: 0;
+  width: 100%;
+}
+.stack[aria-label="Inspector"] h3 {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.val {
+  font-size: 13px;
+  color: var(--text);
+}
+.val.mono {
+  font-family: ui-monospace, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.kf-btn {
+  flex: 0 0 auto;
+  min-width: 26px;
+  padding: 0 6px;
+  color: var(--muted);
+}
+.kf-btn:hover {
+  color: var(--accent);
+}
+.hint {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
