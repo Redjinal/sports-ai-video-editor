@@ -26,6 +26,8 @@ vi.mock("../project/ipc", () => ({
 // The workspace panel owns the timeline (which builds domain commands); stub it out so this
 // test stays focused on the shell composition and save/close behaviour.
 vi.mock("../timeline/Timeline", () => ({ Timeline: () => <div>timeline</div> }));
+// The media bin talks to Tauri; stub it so this test stays on shell composition.
+vi.mock("../media/MediaBin", () => ({ MediaBin: () => <div>media bin</div> }));
 
 import { EditorShell } from "./EditorShell";
 
@@ -55,7 +57,7 @@ afterEach(cleanup);
 describe("Editor shell", () => {
   it("renders the project, workspace, and recovery panels", async () => {
     render(<EditorShell dir={PROJECT_DIR} manifest={manifest} onClose={vi.fn()} />);
-    expect(await screen.findByRole("region", { name: "Project" })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: "Media" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Timeline" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Recovery" })).toBeTruthy();
   });
@@ -67,10 +69,11 @@ describe("Editor shell", () => {
     expect(screen.getAllByText("Home vs Away").length).toBeGreaterThan(0);
   });
 
-  it("surfaces missing media as a count and offers a relink", async () => {
+  it("surfaces missing media as a count in the title bar", async () => {
+    // The relink entry point itself lives in the media bin (tested there); the shell owns the
+    // aggregate missing-media count.
     render(<EditorShell dir={PROJECT_DIR} manifest={manifest} onClose={vi.fn()} />);
     expect(await screen.findByText("1 missing file")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Relink…" })).toBeTruthy();
   });
 
   it("saves on demand", async () => {

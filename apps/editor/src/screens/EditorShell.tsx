@@ -5,6 +5,7 @@ import { createAutosaveScheduler, type AutosaveScheduler } from "@sve/applicatio
 import type { ProjectManifest } from "@sve/project-domain";
 import { PanelGroup, type PanelSpec } from "../shell/PanelGroup";
 import { Timeline } from "../timeline/Timeline";
+import { MediaBin } from "../media/MediaBin";
 import type { Sequence } from "@sve/timeline-domain";
 import {
   describeError,
@@ -173,44 +174,34 @@ export function EditorShell({ dir, manifest: initial, onClose }: Props) {
     () => [
       {
         id: "project",
-        title: "Project",
-        defaultSize: 22,
-        minSize: 12,
+        title: "Media",
+        defaultSize: 24,
+        minSize: 14,
         content: (
           <div className="stack">
             <dl className="facts">
               <div>
-                <dt>Name</dt>
+                <dt>Project</dt>
                 <dd>{manifest.name}</dd>
               </div>
               <div>
                 <dt>Type</dt>
                 <dd>{manifest.projectType}</dd>
               </div>
-              <div>
-                <dt>Schema</dt>
-                <dd>v{manifest.schemaVersion}</dd>
-              </div>
-              <div>
-                <dt>Folder</dt>
-                <dd className="wrap">{dir}</dd>
-              </div>
             </dl>
-            <h3>Media links</h3>
-            {links.length === 0 && <p className="muted">No assets yet.</p>}
-            <ul className="link-list">
-              {links.map((l) => (
-                <li key={l.assetId}>
-                  <span className={`badge ${l.status === "online" ? "good" : "warn"}`}>
-                    {l.status}
-                  </span>
-                  <span className="wrap muted">{l.path}</span>
-                  {(l.status === "offline" || l.status === "invalid") && (
-                    <button onClick={() => setRelinkTarget(l)}>Relink…</button>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <MediaBin
+              manifest={manifest}
+              dir={dir}
+              onManifestChange={markDirty}
+              onError={setError}
+              onRelink={(a) =>
+                setRelinkTarget(
+                  a.proxyPath
+                    ? { assetId: a.id, path: a.path, status: a.status, proxyPath: a.proxyPath }
+                    : { assetId: a.id, path: a.path, status: a.status },
+                )
+              }
+            />
           </div>
         ),
       },

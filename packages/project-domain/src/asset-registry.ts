@@ -60,3 +60,14 @@ export function setAssetProxy(
 export function unusedAssetIds(manifest: ProjectManifest): string[] {
   return findUnusedAssets(manifest).map((a) => a.id);
 }
+
+/**
+ * Remove an asset from the registry. Refuses while any clip still references it, so removal
+ * can never orphan a timeline object (project-format.md §23 — review before removing).
+ */
+export function removeAsset(manifest: ProjectManifest, assetId: string): ProjectManifest {
+  if (referencedAssetIds(manifest).has(assetId)) {
+    throw new Error(`Asset ${assetId} is still used on the timeline`);
+  }
+  return { ...manifest, assets: manifest.assets.filter((a) => a.id !== assetId) };
+}
