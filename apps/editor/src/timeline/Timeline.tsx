@@ -11,12 +11,12 @@ import {
   type Track,
   type TrackFlag,
 } from "@sve/timeline-domain";
-import { useTimeline, nextMeta } from "./useTimeline";
+import { nextMeta, type TimelineApi } from "./useTimeline";
 import { tickToPx, pxToTick, pxToTickDelta, snapToFrame } from "./geometry";
 
 interface TimelineProps {
-  sequence: Sequence;
-  onChange: (sequence: Sequence) => void;
+  /** Shared editing session, so the inspector and viewer edit the same history. */
+  tl: TimelineApi;
   onError?: (message: string) => void;
 }
 
@@ -56,8 +56,7 @@ interface DragState {
   overTrackId: string;
 }
 
-export function Timeline({ sequence, onChange, onError }: TimelineProps) {
-  const tl = useTimeline(sequence, onError ? { onChange, onError } : { onChange });
+export function Timeline({ tl, onError }: TimelineProps) {
   const seq = tl.sequence;
   const [pps, setPps] = useState(12); // pixels per second (zoom)
   const [drag, setDrag] = useState<DragState | null>(null);

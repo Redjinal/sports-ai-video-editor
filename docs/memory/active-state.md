@@ -1,7 +1,7 @@
 # Active State
 
 > **Status:** Living operational memory  
-> **Last updated:** 2026-07-22
+> **Last updated:** 2026-07-22 (M5 inspector checkpoint)
 
 ## 1. Current phase
 
@@ -14,6 +14,50 @@
 **M2 — Project System and Editor Shell: Complete** (merged to `main`, PR #2)
 **M3 — Timeline kernel: Complete** (merged to `main`, PRs #4 + #5) — domain kernel **and** the React editor timeline UI
 **M4 — Media Ingest & Asset Management: Implemented** (branch `feature/m4-media-ingest`, awaiting review)
+**M5 — Graphics, Titles & Keyframes: In progress** (branch `feature/m5-canvas-graphics`, awaiting review)
+
+### M5 progress
+
+Domain (committed): keyframeable `Transform` with linear/hold/ease interpolation and pure
+per-tick evaluation (`transform.ts`); `TextObject` + `GraphicObject` (shape/image/logo/progress/
+waveform/lowerThird) added to the `TimelineObject` union; reversible `SetTransform` / `SetText`
+/ `SetGraphic` commands; full serialize/reopen round-trip. Exit-criteria (state half, Gate B):
+a branded title + lower-third + overlay is built non-destructively with keyframed fade/slide,
+survives save/reopen still animating, and undoes back to empty
+(`m5-exit-criteria.test.ts`).
+
+Interface (Gate A): one editing session is now lifted into `EditorShell` (`useTimeline`) and
+shared by three panels, so every edit lands in the same undo history:
+- **Property inspector** (`apps/editor/src/inspector/`): edits transform channels (with a
+  keyframe-at-playhead toggle per channel), text content/size/colour, and lower-third/shape
+  fields, each through the reversible domain commands; with nothing selected it surfaces the
+  recovery snapshots.
+- **Program viewer** (`apps/editor/src/viewer/`): renders the objects live at the playhead
+  through the domain's evaluated transforms, stacked in track order above the timeline. Direct
+  manipulation — drag-to-move and a corner scale handle — writes back `SetTransform`; a drag
+  previews locally and commits exactly one command on release (one drag = one undo step). Clips
+  show a labelled placeholder (no decoded frame in the shell); the geometry is real.
+
+Transitions (Gate B, DEC-EDIT-007): **separate transition objects** — `TransitionSpec`
+(crossDissolve / dip / fade / wipe) + `TransitionObject` in the `TimelineObject` union, a
+reversible `SetTransition` command, zod round-trip, and a `buildCrossDissolve` helper. Built in
+parallel in an isolated worktree and merged into the M5 branch (the three union declarations
+reconciled by hand). Transitions inherit the keyframeable transform via `RangedObject`.
+
+Templates (domain): **user template saving** — `createTemplate` captures a selection as a
+normalised, self-contained bundle (earliest object at tick 0, relative offsets preserved,
+references leaving the selection dropped); `instantiateTemplate` stamps it at a chosen tick as
+one atomic `Batch` (fresh ids via an idFactory, intra-template references rewritten, optional
+track remap; one stamp = one undo step). The template-library persistence + UI is the native
+follow-up.
+
+**150 tests passing** (3 media `#[ignore]`/skipped pending F-tier fixtures); format + lint +
+typecheck + vitest all green. **Only remaining M5 item: text/font import** (native font-file
+handling — deferred as a native slice). The M5 exit criteria (a branded title + lower-third +
+overlay, non-destructive, surviving save/reopen) is MET at the domain level
+(`m5-exit-criteria.test.ts`) and the inspector + viewer provide the interface to build it. As
+with M3, no human GUI click-through was performed (WebView2 automation resists it here); the UI
+is covered by component tests.
 
 ### M4 exit criteria — MET
 

@@ -5,7 +5,10 @@ import { createAutosaveScheduler, type AutosaveScheduler } from "@sve/applicatio
 import type { ProjectManifest } from "@sve/project-domain";
 import { PanelGroup, type PanelSpec } from "../shell/PanelGroup";
 import { Timeline } from "../timeline/Timeline";
+import { Viewer } from "../viewer/Viewer";
+import { Inspector } from "../inspector/Inspector";
 import { MediaBin } from "../media/MediaBin";
+import { useTimeline } from "../timeline/useTimeline";
 import type { Sequence } from "@sve/timeline-domain";
 import {
   describeError,
@@ -25,6 +28,27 @@ interface Props {
 }
 
 const LAYOUT_KEY = "sve.shell.layout";
+
+/** A placeholder session for projects that have no sequence yet; never edited or saved. */
+function emptySequence(): Sequence {
+  return {
+    id: "__none__",
+    name: "",
+    settings: {
+      width: 1920,
+      height: 1080,
+      pixelAspectRatio: { numerator: 1, denominator: 1 },
+      frameRate: { numerator: 30, denominator: 1 },
+      audioSampleRate: 48_000,
+      background: "#000000",
+      timeDisplayMode: "timecode",
+    },
+    tracks: [],
+    objects: [],
+    markers: [],
+    parentSequenceIds: [],
+  };
+}
 
 /** Workspace layout is transient convenience state, never project truth. */
 function loadLayout<T>(suffix: string, fallback: T): T {
@@ -110,6 +134,16 @@ export function EditorShell({ dir, manifest: initial, onClose }: Props) {
     },
     [markDirty],
   );
+
+  // One shared editing session, seeded from the active sequence. It is the source of truth for
+  // timeline edits; both the Timeline (workspace) and the Inspector (right panel) drive it, so a
+  // property change and a clip move land in the same undo history. Seeded once — the shell is
+  // remounted per project via `key` in App, which reseeds it.
+  const seedRef = useRef<Sequence>(activeSequence ?? emptySequence());
+  const tl = useTimeline(seedRef.current, {
+    onChange: handleSequenceChange,
+    onError: setError,
+  });
 
   const refreshLinks = useCallback(async () => {
     try {
@@ -212,42 +246,24 @@ export function EditorShell({ dir, manifest: initial, onClose }: Props) {
         minSize: 30,
         collapsible: false,
         content: activeSequence ? (
-          <Timeline
-            key={dir}
-            sequence={activeSequence}
-            onChange={handleSequenceChange}
-            onError={setError}
-          />
+          <div className="workspace-split">
+            <Viewer tl={tl} />
+            <Timeline tl={tl} onError={setError} />
+          </div>
         ) : (
           <div className="empty-inspector">This project has no sequence yet.</div>
         ),
       },
       {
         id: "inspector",
-        title: "Recovery",
+        title: "Inspector",
         defaultSize: 22,
         minSize: 12,
-        content: (
-          <div className="stack">
-            <p className="muted">
-              Snapshots are taken automatically. Recovering always opens a copy — your current
-              project is never overwritten.
-            </p>
-            {snapshots.length === 0 && <p className="muted">No snapshots yet.</p>}
-            <ul className="link-list">
-              {snapshots.slice(0, 8).map((s) => (
-                <li key={s.fileName}>
-                  <span className="muted">{new Date(Number(s.stamp)).toLocaleString()}</span>
-                  <button onClick={() => void doRecover(s)}>Recover a copy</button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ),
+        content: <Inspector tl={tl} snapshots={snapshots} onRecover={(s) => void doRecover(s)} />,
       },
     ],
-    // Panels rebuild whenever the data they render changes.
-    [manifest, links, snapshots, dir, activeSequence, handleSequenceChange],
+    // Panels rebuild whenever the data they render changes (including live session state).
+    [manifest, links, snapshots, dir, activeSequence, tl.sequence, tl.selectedId, tl.playheadTicks],
   );
 
   return (

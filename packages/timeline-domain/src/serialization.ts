@@ -34,6 +34,29 @@ const trackSchema = z.object({
   rippleGroupId: z.string().optional(),
 });
 
+const keyframeSchema = z.object({
+  atTicks: tickSchema,
+  value: z.number(),
+  interp: z.enum(["linear", "hold", "ease"]),
+});
+const animatableSchema = z.union([z.number(), z.object({ keyframes: z.array(keyframeSchema) })]);
+const transformSchema = z.object({
+  x: animatableSchema,
+  y: animatableSchema,
+  scale: animatableSchema,
+  rotation: animatableSchema,
+  opacity: animatableSchema,
+  anchorX: z.number(),
+  anchorY: z.number(),
+  cropTop: z.number(),
+  cropRight: z.number(),
+  cropBottom: z.number(),
+  cropLeft: z.number(),
+  flipH: z.boolean(),
+  flipV: z.boolean(),
+  fit: z.enum(["fit", "fill", "stretch"]),
+});
+
 const rangedFields = {
   id: z.string().min(1),
   trackId: z.string().min(1),
@@ -46,7 +69,37 @@ const rangedFields = {
   sourceInTicks: tickSchema,
   sourceDurationTicks: tickSchema.refine((n) => n > 0, "sourceDurationTicks must be > 0"),
   playbackRate: z.union([z.literal(0.25), z.literal(0.5), z.literal(1), z.literal(2)]),
+  transform: transformSchema.optional(),
 };
+
+const textStyleSchema = z.object({
+  fontFamily: z.string(),
+  fontSizePx: z.number(),
+  color: z.string(),
+  weight: z.number(),
+  align: z.enum(["left", "center", "right"]),
+  backgroundColor: z.string().optional(),
+});
+
+const graphicSpecSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("shape"),
+    shape: z.enum(["rectangle", "ellipse"]),
+    fill: z.string(),
+    stroke: z.string().optional(),
+    radius: z.number().optional(),
+  }),
+  z.object({ type: z.literal("image"), assetId: z.string() }),
+  z.object({ type: z.literal("logo"), assetId: z.string() }),
+  z.object({ type: z.literal("progress"), value: z.number(), fill: z.string(), track: z.string() }),
+  z.object({ type: z.literal("waveform"), assetId: z.string(), color: z.string() }),
+  z.object({
+    type: z.literal("lowerThird"),
+    title: z.string(),
+    subtitle: z.string(),
+    accent: z.string(),
+  }),
+]);
 
 const sourceClipSchema = z.object({
   ...rangedFields,
@@ -60,9 +113,48 @@ const nestedSequenceObjectSchema = z.object({
   sequenceId: z.string().min(1),
 });
 
+const textObjectSchema = z.object({
+  ...rangedFields,
+  kind: z.literal("text"),
+  text: z.string(),
+  style: textStyleSchema,
+});
+
+const graphicObjectSchema = z.object({
+  ...rangedFields,
+  kind: z.literal("graphic"),
+  graphic: graphicSpecSchema,
+});
+
+const transitionSpecSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("crossDissolve") }),
+  z.object({ type: z.literal("dip"), color: z.string() }),
+  z.object({
+    type: z.literal("fade"),
+    color: z.string(),
+    direction: z.enum(["in", "out"]),
+  }),
+  z.object({
+    type: z.literal("wipe"),
+    angleDegrees: z.number(),
+    softnessPx: z.number().nonnegative(),
+  }),
+]);
+
+const transitionObjectSchema = z.object({
+  ...rangedFields,
+  kind: z.literal("transition"),
+  transition: transitionSpecSchema,
+  fromId: z.string().optional(),
+  toId: z.string().optional(),
+});
+
 const timelineObjectSchema = z.discriminatedUnion("kind", [
   sourceClipSchema,
   nestedSequenceObjectSchema,
+  textObjectSchema,
+  graphicObjectSchema,
+  transitionObjectSchema,
 ]);
 
 const markerSchema = z.object({

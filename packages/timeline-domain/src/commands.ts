@@ -2,7 +2,16 @@
 // Every mutation is an atomic command with a deterministic inverse. apply is a pure
 // function of (sequence, command): it never reads UI selection and never mutates input.
 // A failing command throws and does not enter history.
-import type { Marker, Sequence, TimelineObject } from "./model";
+import type {
+  GraphicSpec,
+  Marker,
+  Sequence,
+  TextStyle,
+  TimelineObject,
+  TransitionObject,
+  TransitionSpec,
+} from "./model";
+import type { Transform } from "./transform";
 import { type Ticks, asTicks, endTicks, ZERO_TICKS } from "./ticks";
 
 export interface CommandMeta {
@@ -24,6 +33,18 @@ export interface RemoveObjectCommand {
   type: "RemoveObject";
   meta: CommandMeta;
   objectId: string;
+}
+
+/**
+ * Replace the blend recipe of a transition object in place (DEC-EDIT-007). Only the
+ * `transition` field changes; span/track are edited through the ranged commands. The inverse
+ * restores the prior spec exactly, so undo is deterministic.
+ */
+export interface SetTransitionCommand {
+  type: "SetTransition";
+  meta: CommandMeta;
+  objectId: string;
+  transition: TransitionSpec;
 }
 
 export type TrimEdge = "start" | "end";
@@ -110,9 +131,38 @@ export interface MoveMarkerCommand {
   toTicks: Ticks;
 }
 
+/**
+ * Replace an object's visual transform (M5). The UI computes the whole transform — including
+ * keyframe edits — and dispatches it here; `undefined` clears back to identity. Fully reversible.
+ */
+export interface SetTransformCommand {
+  type: "SetTransform";
+  meta: CommandMeta;
+  objectId: string;
+  transform: Transform | undefined;
+}
+
+/** Edit a text object's content and style (M5). Reversible. */
+export interface SetTextCommand {
+  type: "SetText";
+  meta: CommandMeta;
+  objectId: string;
+  text: string;
+  style: TextStyle;
+}
+
+/** Edit a graphic object's specification (M5). Reversible. */
+export interface SetGraphicCommand {
+  type: "SetGraphic";
+  meta: CommandMeta;
+  objectId: string;
+  graphic: GraphicSpec;
+}
+
 export type TimelineCommand =
   | AddObjectCommand
   | RemoveObjectCommand
+  | SetTransitionCommand
   | TrimObjectCommand
   | MoveObjectCommand
   | SplitObjectCommand
@@ -121,6 +171,9 @@ export type TimelineCommand =
   | AddMarkerCommand
   | RemoveMarkerCommand
   | MoveMarkerCommand
+  | SetTransformCommand
+  | SetTextCommand
+  | SetGraphicCommand
   | BatchCommand;
 
 export interface CommandContext {
@@ -267,6 +320,25 @@ function applyRemove(seq: Sequence, cmd: RemoveObjectCommand): CommandResult {
     object,
   };
   return { sequence, inverse };
+}
+
+function applySetTransition(seq: Sequence, cmd: SetTransitionCommand): CommandResult {
+  const object = requireObject(seq, cmd.objectId);
+  if (object.kind !== "transition") {
+    throw new CommandError(
+      `Object ${cmd.objectId} is not a transition`,
+      "TIMELINE_OBJECT_NOT_FOUND",
+    );
+  }
+  const previous = object.transition;
+  const next: TimelineObject = { ...object, transition: cmd.transition };
+  const inverse: SetTransitionCommand = {
+    type: "SetTransition",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    transition: previous,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
 }
 
 function applyTrim(seq: Sequence, cmd: TrimObjectCommand, ctx: CommandContext): CommandResult {
@@ -505,6 +577,59 @@ function applyMoveMarker(seq: Sequence, cmd: MoveMarkerCommand): CommandResult {
   return { sequence, inverse };
 }
 
+function applySetTransform(seq: Sequence, cmd: SetTransformCommand): CommandResult {
+  const obj = requireObject(seq, cmd.objectId);
+  const previous = obj.transform;
+  // Build the next object with the transform set, or with the key removed when clearing —
+  // preserving the exact "no transform" vs "identity transform" distinction for undo.
+  let next: TimelineObject;
+  if (cmd.transform === undefined) {
+    const rest = { ...obj };
+    delete (rest as { transform?: Transform }).transform;
+    next = rest;
+  } else {
+    next = { ...obj, transform: cmd.transform };
+  }
+  const inverse: SetTransformCommand = {
+    type: "SetTransform",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    transform: previous,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
+}
+
+function applySetText(seq: Sequence, cmd: SetTextCommand): CommandResult {
+  const obj = requireObject(seq, cmd.objectId);
+  if (obj.kind !== "text") {
+    throw new CommandError(`Object ${cmd.objectId} is not text`, "TIMELINE_OBJECT_NOT_FOUND");
+  }
+  const next = { ...obj, text: cmd.text, style: cmd.style };
+  const inverse: SetTextCommand = {
+    type: "SetText",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    text: obj.text,
+    style: obj.style,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
+}
+
+function applySetGraphic(seq: Sequence, cmd: SetGraphicCommand): CommandResult {
+  const obj = requireObject(seq, cmd.objectId);
+  if (obj.kind !== "graphic") {
+    throw new CommandError(`Object ${cmd.objectId} is not a graphic`, "TIMELINE_OBJECT_NOT_FOUND");
+  }
+  const next = { ...obj, graphic: cmd.graphic };
+  const inverse: SetGraphicCommand = {
+    type: "SetGraphic",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    graphic: obj.graphic,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
+}
+
 function applyBatch(seq: Sequence, cmd: BatchCommand, ctx: CommandContext): CommandResult {
   // Thread the sequence immutably; if any sub-command throws, nothing is committed.
   let working = seq;
@@ -536,6 +661,8 @@ export function applyCommand(
       return applyAdd(seq, cmd, ctx);
     case "RemoveObject":
       return applyRemove(seq, cmd);
+    case "SetTransition":
+      return applySetTransition(seq, cmd);
     case "TrimObject":
       return applyTrim(seq, cmd, ctx);
     case "MoveObject":
@@ -552,7 +679,58 @@ export function applyCommand(
       return applyRemoveMarker(seq, cmd);
     case "MoveMarker":
       return applyMoveMarker(seq, cmd);
+    case "SetTransform":
+      return applySetTransform(seq, cmd);
+    case "SetText":
+      return applySetText(seq, cmd);
+    case "SetGraphic":
+      return applySetGraphic(seq, cmd);
     case "Batch":
       return applyBatch(seq, cmd, ctx);
   }
+}
+
+export interface BuildCrossDissolveOptions {
+  /** Id for the new transition object. */
+  id: string;
+  /** Outgoing clip: the transition centres on where this object ends. */
+  fromId: string;
+  /** Incoming clip that begins at the same boundary. */
+  toId: string;
+  /** Total span of the transition; it straddles the cut symmetrically. */
+  durationTicks: Ticks;
+  meta: CommandMeta;
+}
+
+/**
+ * Build the command that drops a crossDissolve transition object over the cut between two
+ * adjacent clips (DEC-EDIT-007). The transition is centred on the boundary — it starts
+ * duration/2 before the cut and spans it — and lands on the outgoing clip's track. Returns an
+ * AddObjectCommand (transitions are ordinary TimelineObjects), so undo is the generic
+ * RemoveObject inverse.
+ */
+export function buildCrossDissolve(
+  seq: Sequence,
+  opts: BuildCrossDissolveOptions,
+): AddObjectCommand {
+  const from = requireObject(seq, opts.fromId);
+  requireObject(seq, opts.toId);
+  const boundary = endTicks(from.startTicks, from.durationTicks);
+  const half = asTicks(Math.floor(opts.durationTicks / 2));
+  const start = asTicks(boundary - half);
+  const object: TransitionObject = {
+    kind: "transition",
+    id: opts.id,
+    trackId: from.trackId,
+    startTicks: start,
+    durationTicks: opts.durationTicks,
+    enabled: true,
+    sourceInTicks: ZERO_TICKS,
+    sourceDurationTicks: opts.durationTicks,
+    playbackRate: 1,
+    transition: { type: "crossDissolve" },
+    fromId: opts.fromId,
+    toId: opts.toId,
+  };
+  return { type: "AddObject", meta: opts.meta, object };
 }
