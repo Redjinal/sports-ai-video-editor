@@ -5,6 +5,7 @@ import { createAutosaveScheduler, type AutosaveScheduler } from "@sve/applicatio
 import type { ProjectManifest } from "@sve/project-domain";
 import { PanelGroup, type PanelSpec } from "../shell/PanelGroup";
 import { Timeline } from "../timeline/Timeline";
+import { Viewer } from "../viewer/Viewer";
 import { Inspector } from "../inspector/Inspector";
 import { MediaBin } from "../media/MediaBin";
 import { useTimeline } from "../timeline/useTimeline";
@@ -245,7 +246,10 @@ export function EditorShell({ dir, manifest: initial, onClose }: Props) {
         minSize: 30,
         collapsible: false,
         content: activeSequence ? (
-          <Timeline tl={tl} onError={setError} />
+          <div className="workspace-split">
+            <Viewer tl={tl} />
+            <Timeline tl={tl} onError={setError} />
+          </div>
         ) : (
           <div className="empty-inspector">This project has no sequence yet.</div>
         ),
