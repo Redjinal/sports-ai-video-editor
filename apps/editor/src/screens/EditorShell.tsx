@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createAutosaveScheduler, type AutosaveScheduler } from "@sve/application-services";
 import type { ProjectManifest } from "@sve/project-domain";
 import { PanelGroup, type PanelSpec } from "../shell/PanelGroup";
-import { SliceWorkspace } from "./SliceWorkspace";
+import { Timeline } from "../timeline/Timeline";
+import type { Sequence } from "@sve/timeline-domain";
 import {
   describeError,
   detectLinks,
@@ -88,6 +89,26 @@ export function EditorShell({ dir, manifest: initial, onClose }: Props) {
     setSaveState("unsaved");
     schedulerRef.current?.markDirty();
   }, []);
+
+  // The manifest schema (zod-inferred) types optionals as `| undefined`, which
+  // exactOptionalPropertyTypes won't assign to the hand-written Sequence — the runtime shape
+  // is identical (validated by parseManifest), so cast at this boundary.
+  const sequences = manifest.sequences ?? [];
+  const activeSequence = (sequences.find((s) => s.id === manifest.activeMasterSequenceId) ??
+    sequences[0]) as Sequence | undefined;
+
+  // A timeline edit updates the active sequence in the manifest and schedules an autosave.
+  const handleSequenceChange = useCallback(
+    (seq: Sequence) => {
+      const current = manifestRef.current;
+      markDirty({
+        ...current,
+        sequences: (current.sequences ?? []).map((s) => (s.id === seq.id ? seq : s)),
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    [markDirty],
+  );
 
   const refreshLinks = useCallback(async () => {
     try {
@@ -195,11 +216,20 @@ export function EditorShell({ dir, manifest: initial, onClose }: Props) {
       },
       {
         id: "workspace",
-        title: "Workspace",
+        title: "Timeline",
         defaultSize: 56,
         minSize: 30,
         collapsible: false,
-        content: <SliceWorkspace />,
+        content: activeSequence ? (
+          <Timeline
+            key={dir}
+            sequence={activeSequence}
+            onChange={handleSequenceChange}
+            onError={setError}
+          />
+        ) : (
+          <div className="empty-inspector">This project has no sequence yet.</div>
+        ),
       },
       {
         id: "inspector",
@@ -226,7 +256,7 @@ export function EditorShell({ dir, manifest: initial, onClose }: Props) {
       },
     ],
     // Panels rebuild whenever the data they render changes.
-    [manifest, links, snapshots, dir],
+    [manifest, links, snapshots, dir, activeSequence, handleSequenceChange],
   );
 
   return (
