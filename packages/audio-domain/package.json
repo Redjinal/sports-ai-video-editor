@@ -1,0 +1,17 @@
+{
+  "name": "@sve/audio-domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral audio mixing model: mixer/bus routing, mute/solo resolution, gain math, volume automation, and fades.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/timeline-domain": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}
