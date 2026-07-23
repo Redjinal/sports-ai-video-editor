@@ -23,9 +23,9 @@ vi.mock("../project/ipc", () => ({
   describeError: (e: unknown) => String(e),
 }));
 
-// The workspace panel owns the M1 media slice and calls Tauri on mount; stub it out so
-// this test stays focused on the shell.
-vi.mock("./SliceWorkspace", () => ({ SliceWorkspace: () => <div>workspace</div> }));
+// The workspace panel owns the timeline (which builds domain commands); stub it out so this
+// test stays focused on the shell composition and save/close behaviour.
+vi.mock("../timeline/Timeline", () => ({ Timeline: () => <div>timeline</div> }));
 
 import { EditorShell } from "./EditorShell";
 
@@ -56,7 +56,7 @@ describe("Editor shell", () => {
   it("renders the project, workspace, and recovery panels", async () => {
     render(<EditorShell dir={PROJECT_DIR} manifest={manifest} onClose={vi.fn()} />);
     expect(await screen.findByRole("region", { name: "Project" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Workspace" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Timeline" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Recovery" })).toBeTruthy();
   });
 
