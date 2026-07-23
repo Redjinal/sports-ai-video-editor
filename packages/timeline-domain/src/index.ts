@@ -8,3 +8,4 @@ export * from "./operations";
 export * from "./snapping";
 export * from "./history";
 export * from "./serialization";
+export * from "./templates";
