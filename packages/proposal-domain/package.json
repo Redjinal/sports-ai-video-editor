@@ -1,0 +1,17 @@
+{
+  "name": "@sve/proposal-domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral AI-proposal lifecycle and social-sequence domain: scoped assistant commands, isolated proposal sequences with master-mutation protection, and provider-neutral highlight scoring.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/timeline-domain": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}
