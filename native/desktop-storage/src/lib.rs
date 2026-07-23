@@ -8,5 +8,6 @@
 
 pub mod error;
 pub mod index;
+pub mod media;
 pub mod media_links;
 pub mod project;

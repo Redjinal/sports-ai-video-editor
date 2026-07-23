@@ -12,7 +12,23 @@
 **M0 — Governance and Contracts: Complete**
 **M1 — Technical Vertical Slice: Complete** (merged to `main` 2026-07-22, PR #1)
 **M2 — Project System and Editor Shell: Complete** (merged to `main`, PR #2)
-**M3 — Timeline kernel: Complete** (PR #4, pre-approved) — domain kernel **and** the React editor timeline UI
+**M3 — Timeline kernel: Complete** (merged to `main`, PRs #4 + #5) — domain kernel **and** the React editor timeline UI
+**M4 — Media Ingest & Asset Management: Implemented** (branch `feature/m4-media-ingest`, awaiting review)
+
+### M4 exit criteria — MET
+
+Roadmap §8: *"A 120-minute 2K asset can be inspected, ingested, proxied, reopened, and
+relinked without losing the original reference."* Proven at 2K (2560×1440) end-to-end
+(`native/desktop-media/tests/m4_exit_criteria.rs`, `#[ignore]`): inspect → ingest into a saved
+project → generate a 720p proxy (original untouched) → reopen (asset + reference intact) →
+move the original → relink to the new location, original preserved. The full 120-minute run is
+a release-tier F5 fixture (ISSUE-009); the mechanics are duration-independent.
+
+M4 delivered: thumbnail strips + streaming waveforms + managed conversion (Rust
+`desktop-media`); consolidate / cache-clean / package (Rust `desktop-storage`); the
+platform-neutral asset registry + ingest use case; IPC for all of the above; and the editor
+media bin (import, registry with compat/status, per-asset proxy, filter, unused review with
+guarded removal, consolidate/clean/package). Gate C.
 
 M1/M2 exit criteria met and evidenced. M3 exit criteria met at the domain level
 (`packages/timeline-domain/src/exit-criteria.test.ts`): a multi-track edit survives

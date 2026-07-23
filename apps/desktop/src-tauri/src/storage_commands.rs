@@ -9,8 +9,12 @@ use std::sync::Mutex;
 
 use desktop_storage::error::{StorageError, StorageErrorCode};
 use desktop_storage::index::{ProjectIndex, RecentProject};
+use desktop_storage::media::{
+    self, CacheCleanReport, ConsolidatedAsset, PackageMode, PackageReport,
+};
 use desktop_storage::media_links::{self, AssetLink};
 use desktop_storage::project::{self, RecoverySnapshot};
+use serde::Deserialize;
 use serde_json::Value;
 use tauri::{Manager, State};
 
@@ -190,4 +194,42 @@ pub fn recent_projects(
         )
     })?;
     guard.recent(limit)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConsolidateItem {
+    pub asset_id: String,
+    pub source_path: String,
+}
+
+#[tauri::command]
+pub fn project_consolidate(
+    dir: String,
+    items: Vec<ConsolidateItem>,
+) -> Result<Vec<ConsolidatedAsset>, StorageError> {
+    let pairs: Vec<(String, String)> = items
+        .into_iter()
+        .map(|i| (i.asset_id, i.source_path))
+        .collect();
+    media::consolidate(Path::new(&dir), &pairs)
+}
+
+#[tauri::command]
+pub fn project_clean_cache(dir: String) -> Result<CacheCleanReport, StorageError> {
+    media::clean_cache(Path::new(&dir))
+}
+
+#[tauri::command]
+pub fn project_package(
+    dir: String,
+    dest: String,
+    with_media: bool,
+) -> Result<PackageReport, StorageError> {
+    let mode = if with_media {
+        PackageMode::WithMedia
+    } else {
+        PackageMode::DataOnly
+    };
+    media::package_project(Path::new(&dir), Path::new(&dest), mode)
 }
