@@ -44,8 +44,18 @@ reversible `SetTransition` command, zod round-trip, and a `buildCrossDissolve` h
 parallel in an isolated worktree and merged into the M5 branch (the three union declarations
 reconciled by hand). Transitions inherit the keyframeable transform via `RangedObject`.
 
-**145 tests passing** (3 media `#[ignore]`/skipped pending F-tier fixtures); format + lint +
-typecheck + vitest all green. Still to do in M5: user template saving and text/font import. As
+Templates (domain): **user template saving** — `createTemplate` captures a selection as a
+normalised, self-contained bundle (earliest object at tick 0, relative offsets preserved,
+references leaving the selection dropped); `instantiateTemplate` stamps it at a chosen tick as
+one atomic `Batch` (fresh ids via an idFactory, intra-template references rewritten, optional
+track remap; one stamp = one undo step). The template-library persistence + UI is the native
+follow-up.
+
+**150 tests passing** (3 media `#[ignore]`/skipped pending F-tier fixtures); format + lint +
+typecheck + vitest all green. **Only remaining M5 item: text/font import** (native font-file
+handling — deferred as a native slice). The M5 exit criteria (a branded title + lower-third +
+overlay, non-destructive, surviving save/reopen) is MET at the domain level
+(`m5-exit-criteria.test.ts`) and the inspector + viewer provide the interface to build it. As
 with M3, no human GUI click-through was performed (WebView2 automation resists it here); the UI
 is covered by component tests.
 
