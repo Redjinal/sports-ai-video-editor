@@ -1,0 +1,17 @@
+{
+  "name": "@sve/basketball-domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral basketball domain: game setup, roster import, event-sourced game log, derived score/fouls/clock, and marker conversion.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sve/timeline-domain": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}
