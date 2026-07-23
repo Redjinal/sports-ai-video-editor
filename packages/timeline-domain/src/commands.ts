@@ -5,6 +5,8 @@
 import type {
   GraphicSpec,
   Marker,
+  MulticamAngle,
+  MulticamSwitch,
   Sequence,
   TextStyle,
   TimelineObject,
@@ -159,6 +161,22 @@ export interface SetGraphicCommand {
   graphic: GraphicSpec;
 }
 
+/**
+ * Replace a multicam object's editable program — angles (with sync offsets), switch points,
+ * audio angle, and angle locks — atomically (M7). Every non-destructive multicam edit (live
+ * switch, switch-point move, active-angle replacement, sync, lock) flows through this one
+ * reversible command, mirroring how the UI edits transforms/graphics.
+ */
+export interface SetMulticamCommand {
+  type: "SetMulticam";
+  meta: CommandMeta;
+  objectId: string;
+  angles: MulticamAngle[];
+  switches: MulticamSwitch[];
+  audioAngleId: string;
+  lockedAngleIds: string[];
+}
+
 export type TimelineCommand =
   | AddObjectCommand
   | RemoveObjectCommand
@@ -174,6 +192,7 @@ export type TimelineCommand =
   | SetTransformCommand
   | SetTextCommand
   | SetGraphicCommand
+  | SetMulticamCommand
   | BatchCommand;
 
 export interface CommandContext {
@@ -630,6 +649,30 @@ function applySetGraphic(seq: Sequence, cmd: SetGraphicCommand): CommandResult {
   return { sequence: replaceObject(seq, next), inverse };
 }
 
+function applySetMulticam(seq: Sequence, cmd: SetMulticamCommand): CommandResult {
+  const obj = requireObject(seq, cmd.objectId);
+  if (obj.kind !== "multicam") {
+    throw new CommandError(`Object ${cmd.objectId} is not a multicam`, "TIMELINE_OBJECT_NOT_FOUND");
+  }
+  const next = {
+    ...obj,
+    angles: cmd.angles,
+    switches: cmd.switches,
+    audioAngleId: cmd.audioAngleId,
+    lockedAngleIds: cmd.lockedAngleIds,
+  };
+  const inverse: SetMulticamCommand = {
+    type: "SetMulticam",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    angles: obj.angles,
+    switches: obj.switches,
+    audioAngleId: obj.audioAngleId,
+    lockedAngleIds: obj.lockedAngleIds,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
+}
+
 function applyBatch(seq: Sequence, cmd: BatchCommand, ctx: CommandContext): CommandResult {
   // Thread the sequence immutably; if any sub-command throws, nothing is committed.
   let working = seq;
@@ -685,6 +728,8 @@ export function applyCommand(
       return applySetText(seq, cmd);
     case "SetGraphic":
       return applySetGraphic(seq, cmd);
+    case "SetMulticam":
+      return applySetMulticam(seq, cmd);
     case "Batch":
       return applyBatch(seq, cmd, ctx);
   }

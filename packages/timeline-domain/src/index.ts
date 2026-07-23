@@ -9,3 +9,4 @@ export * from "./snapping";
 export * from "./history";
 export * from "./serialization";
 export * from "./templates";
+export * from "./multicam";

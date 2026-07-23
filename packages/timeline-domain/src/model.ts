@@ -112,6 +112,41 @@ export interface NestedSequenceObject extends RangedObject {
   sequenceId: string;
 }
 
+/** One camera angle inside a multicam object (M7). */
+export interface MulticamAngle {
+  id: string;
+  /** Source asset backing this angle. */
+  assetId: string;
+  /** Sync offset applied to this angle's source, in ticks (may be negative). */
+  offsetTicks: Ticks;
+  label: string;
+  /** Embedded source timecode start, in ticks, for timecode sync (optional). */
+  timecodeStartTicks?: Ticks;
+}
+
+/** A point (object-relative ticks) at which the program cuts to `angleId` (M7). */
+export interface MulticamSwitch {
+  atTicks: Ticks;
+  angleId: string;
+}
+
+/**
+ * A multicam object (M7, DEC-EDIT-006): several synchronised camera angles under one object,
+ * with an ordered list of switch points that define which angle is live over time. Switching is
+ * non-destructive — the angles and switch program are instructions; the active angle at any tick
+ * is derived. Audio can follow a fixed angle independent of the video switching.
+ */
+export interface MulticamObject extends RangedObject {
+  kind: "multicam";
+  angles: MulticamAngle[];
+  /** Ordered switch points, object-relative; the active angle is the last switch at/<= t. */
+  switches: MulticamSwitch[];
+  /** Angle whose audio is used regardless of video switching. */
+  audioAngleId: string;
+  /** Angles locked from switching/replacement. */
+  lockedAngleIds: string[];
+}
+
 /**
  * How a transition blends across its span (DEC-EDIT-007). A discriminated union on `type` so
  * each variant carries only the parameters it needs. Time is authoritative on the enclosing
@@ -143,7 +178,12 @@ export interface TransitionObject extends RangedObject {
 }
 
 export type TimelineObject =
-  SourceClip | NestedSequenceObject | TextObject | GraphicObject | TransitionObject;
+  | SourceClip
+  | NestedSequenceObject
+  | TextObject
+  | GraphicObject
+  | TransitionObject
+  | MulticamObject;
 
 /** Kinds that carry a visual transform (everything except pure audio clips at runtime). */
 export type VisualObject = TimelineObject;
