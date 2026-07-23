@@ -3,6 +3,7 @@
 // function of (sequence, command): it never reads UI selection and never mutates input.
 // A failing command throws and does not enter history.
 import type { Marker, Sequence, TimelineObject } from "./model";
+import type { Transform } from "./transform";
 import { type Ticks, asTicks, endTicks, ZERO_TICKS } from "./ticks";
 
 export interface CommandMeta {
@@ -110,6 +111,17 @@ export interface MoveMarkerCommand {
   toTicks: Ticks;
 }
 
+/**
+ * Replace an object's visual transform (M5). The UI computes the whole transform — including
+ * keyframe edits — and dispatches it here; `undefined` clears back to identity. Fully reversible.
+ */
+export interface SetTransformCommand {
+  type: "SetTransform";
+  meta: CommandMeta;
+  objectId: string;
+  transform: Transform | undefined;
+}
+
 export type TimelineCommand =
   | AddObjectCommand
   | RemoveObjectCommand
@@ -121,6 +133,7 @@ export type TimelineCommand =
   | AddMarkerCommand
   | RemoveMarkerCommand
   | MoveMarkerCommand
+  | SetTransformCommand
   | BatchCommand;
 
 export interface CommandContext {
@@ -505,6 +518,28 @@ function applyMoveMarker(seq: Sequence, cmd: MoveMarkerCommand): CommandResult {
   return { sequence, inverse };
 }
 
+function applySetTransform(seq: Sequence, cmd: SetTransformCommand): CommandResult {
+  const obj = requireObject(seq, cmd.objectId);
+  const previous = obj.transform;
+  // Build the next object with the transform set, or with the key removed when clearing —
+  // preserving the exact "no transform" vs "identity transform" distinction for undo.
+  let next: TimelineObject;
+  if (cmd.transform === undefined) {
+    const rest = { ...obj };
+    delete (rest as { transform?: Transform }).transform;
+    next = rest;
+  } else {
+    next = { ...obj, transform: cmd.transform };
+  }
+  const inverse: SetTransformCommand = {
+    type: "SetTransform",
+    meta: invertMeta(cmd.meta, "inv"),
+    objectId: cmd.objectId,
+    transform: previous,
+  };
+  return { sequence: replaceObject(seq, next), inverse };
+}
+
 function applyBatch(seq: Sequence, cmd: BatchCommand, ctx: CommandContext): CommandResult {
   // Thread the sequence immutably; if any sub-command throws, nothing is committed.
   let working = seq;
@@ -552,6 +587,8 @@ export function applyCommand(
       return applyRemoveMarker(seq, cmd);
     case "MoveMarker":
       return applyMoveMarker(seq, cmd);
+    case "SetTransform":
+      return applySetTransform(seq, cmd);
     case "Batch":
       return applyBatch(seq, cmd, ctx);
   }
