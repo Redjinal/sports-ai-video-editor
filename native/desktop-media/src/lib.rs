@@ -9,7 +9,9 @@ pub mod error;
 pub mod ffbin;
 pub mod inspect;
 pub mod plan;
+pub mod thumbnail;
 pub mod validate;
+pub mod waveform;
 
 /// Canonical timeline timescale: integer ticks per second (DEC-EDIT-009).
 /// Must stay identical to `TIMESCALE` in `@sve/timeline-domain`.
