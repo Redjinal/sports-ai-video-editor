@@ -149,12 +149,30 @@ const transitionObjectSchema = z.object({
   toId: z.string().optional(),
 });
 
+const multicamAngleSchema = z.object({
+  id: z.string().min(1),
+  assetId: z.string().min(1),
+  offsetTicks: tickSchema,
+  label: z.string(),
+  timecodeStartTicks: tickSchema.optional(),
+});
+
+const multicamObjectSchema = z.object({
+  ...rangedFields,
+  kind: z.literal("multicam"),
+  angles: z.array(multicamAngleSchema),
+  switches: z.array(z.object({ atTicks: tickSchema, angleId: z.string().min(1) })),
+  audioAngleId: z.string(),
+  lockedAngleIds: z.array(z.string()),
+});
+
 const timelineObjectSchema = z.discriminatedUnion("kind", [
   sourceClipSchema,
   nestedSequenceObjectSchema,
   textObjectSchema,
   graphicObjectSchema,
   transitionObjectSchema,
+  multicamObjectSchema,
 ]);
 
 const markerSchema = z.object({
