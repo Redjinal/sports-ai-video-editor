@@ -103,6 +103,42 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
 
+  packages/basketball-domain:
+    dependencies:
+      '@sve/timeline-domain':
+        specifier: workspace:*
+        version: link:../timeline-domain
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/caption-domain:
+    dependencies:
+      '@sve/timeline-domain':
+        specifier: workspace:*
+        version: link:../timeline-domain
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/connector-domain:
+    dependencies:
+      '@sve/timeline-domain':
+        specifier: workspace:*
+        version: link:../timeline-domain
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/export-domain:
+    dependencies:
+      '@sve/timeline-domain':
+        specifier: workspace:*
+        version: link:../timeline-domain
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
   packages/media-contracts:
     dependencies:
       zod:
@@ -116,6 +152,15 @@ importers:
         version: link:../project-domain
 
   packages/project-domain:
+    dependencies:
+      '@sve/timeline-domain':
+        specifier: workspace:*
+        version: link:../timeline-domain
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/proposal-domain:
     dependencies:
       '@sve/timeline-domain':
         specifier: workspace:*
