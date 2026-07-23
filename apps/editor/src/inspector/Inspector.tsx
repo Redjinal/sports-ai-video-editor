@@ -16,6 +16,7 @@ import {
   type GraphicObject,
 } from "@sve/timeline-domain";
 import { nextMeta, type TimelineApi } from "../timeline/useTimeline";
+import { MulticamPanel } from "../multicam/MulticamPanel";
 import type { RecoverySnapshot } from "../project/ipc";
 
 interface InspectorProps {
@@ -147,6 +148,7 @@ export function Inspector({ tl, snapshots, onRecover }: InspectorProps) {
 
       {selected.kind === "text" && <TextEditor tl={tl} obj={selected} />}
       {selected.kind === "graphic" && <GraphicEditor tl={tl} obj={selected} />}
+      {selected.kind === "multicam" && <MulticamPanel tl={tl} obj={selected} />}
 
       <p className="hint">
         Every property is a reversible command with keyframes stored as instructions — nothing is

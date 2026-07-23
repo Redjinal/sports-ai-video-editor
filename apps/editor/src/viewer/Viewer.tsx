@@ -11,6 +11,7 @@ import {
   evaluateTransform,
   isAnimated,
   upsertKeyframe,
+  activeAngleAt,
   type AnimatableNumber,
   type Sequence,
   type TimelineObject,
@@ -22,7 +23,7 @@ interface ViewerProps {
   tl: TimelineApi;
 }
 
-const VISUAL_KINDS = new Set(["clip", "nested", "text", "graphic"]);
+const VISUAL_KINDS = new Set(["clip", "nested", "text", "graphic", "multicam"]);
 type MoveMode = "move" | "scale";
 
 interface DragState {
@@ -195,7 +196,7 @@ export function Viewer({ tl }: ViewerProps) {
                   }}
                   onPointerDown={(e) => startDrag(obj, "move", e)}
                 >
-                  <ObjectBody obj={obj} />
+                  <ObjectBody obj={obj} ticks={t} />
                   {selected && (
                     <button
                       className="vo-scale"
@@ -229,7 +230,17 @@ export function Viewer({ tl }: ViewerProps) {
   );
 }
 
-function ObjectBody({ obj }: { obj: TimelineObject }) {
+function ObjectBody({ obj, ticks }: { obj: TimelineObject; ticks: number }) {
+  if (obj.kind === "multicam") {
+    const onAir = activeAngleAt(obj, ticks - obj.startTicks);
+    const angle = obj.angles.find((a) => a.id === onAir);
+    return (
+      <div className="vo-clip vo-multicam">
+        <span className="badge good">ON AIR</span>
+        {angle?.label ?? "—"}
+      </div>
+    );
+  }
   if (obj.kind === "text") {
     return (
       <div
